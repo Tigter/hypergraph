@@ -1,0 +1,174 @@
+baseConfig: 
+  cuda: True
+  do_train: True
+  og_step: 1000
+  save_step: 10000
+  valid_step: 10000
+
+base_01: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 0.2
+  dim: 1000
+  lr: 0.0005
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,5]
+  data_reverse: False
+
+base_02: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 0.2
+  dim: 1000
+  lr: 0.001
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,5]
+  data_reverse: False
+
+base_03: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 200
+  lr: 0.0005
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,5]
+  data_reverse: False
+
+
+base_04: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 5
+  dim: 200
+  lr: 0.0001
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  neibor_size: [30,5]
+  margin: 0.2
+  cl_temp: 1.0
+  data_reverse: False
+
+base_05: 
+  batch_size: 2048
+  name: ComplEx
+  gamma: 0.3
+  dim: 100
+  lr: 0.0005
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  data_reverse: False
+
+base_06: 
+  batch_size: 2048
+  name: ComplEx
+  gamma: 0.3
+  dim: 100
+  lr: 0.0005
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  data_reverse: False
+
+base_07: 
+  batch_size: 2
+  name: ComplEx
+  gamma: 40
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  data_reverse: False
+
+
+base_08: 
+  batch_size: 1024
+  name: ComplEx
+  gamma: 50
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  max_step: 10000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  data_reverse: False
+
+HyperKGEConfig: 
+  dropout: 0.2
+  num_layers: 1
+  embedding_dim: 50
+  MLP_hidden: 500
+  MLP_num_layers: 2
+  heads: 4
+  aggregate: 'mean'
+  normalization: 'ln'
+  deepset_input_norm: True
+  deepset_input_norm: True
+  GPR: False
+  PMA: True
+  lr: 0.001
+  wd: 0.0
