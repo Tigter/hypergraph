@@ -87,8 +87,7 @@ class HyperGraphV3(Module):
 
     def rel_cat(self, relation_base, relation_attr):
         rel_emb = torch.cat([relation_base,relation_attr],dim=-1)
-
-        rel_emb = self.rel_merge(relation_attr)
+        rel_emb = self.rel_merge(rel_emb)
         return rel_emb
 
 
@@ -148,7 +147,7 @@ class HyperGraphV3(Module):
         score = torch.cat([pos_score,neg_score ], dim=1)
 
         binery_label = torch.zeros_like(score)
-        binery_label[:,0]=1
+        binery_label[:,0] = 1
 
         # relation_emb = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
         # rel_emb  = relation_emb.unsqueeze(1)
