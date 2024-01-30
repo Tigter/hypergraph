@@ -39,7 +39,69 @@ cset,eset, e2id,c2id = build_id_dict(data)
 
 c_num = len(cset)
 e_num = len(eset)
-edge_id = c_num + e_num
+
+
+with open("./aux_data.json", 'r') as f:
+    aux_data = json.load(f)
+    # "ec_label_dict": lalbel_dict,
+    # "e2label": e2lable,
+    # "ko2id": ko2id,
+    # "e2ko_list": e2ko_list
+
+ec_label_dict = aux_data["ec_label_dict"]
+e2label = aux_data["e2label"]
+e2ko_list = aux_data["e2ko_list"]
+ko2id = aux_data["ko2id"]
+
+# 首先将两个东西所有的label 和 ko label 统一编码
+l1_dict = ec_label_dict["lable1"]
+l2_dict = ec_label_dict["lable2"]
+l3_dict = ec_label_dict["lable3"]
+
+
+uni_dict = {}
+uni_id = c_num + e_num
+
+for key in sorted(list(l1_dict.keys())):
+    uni_dict[key] = uni_id
+    uni_id += 1
+
+for key in sorted(list(l2_dict.keys())):
+    uni_dict[key] = uni_id
+    uni_id += 1
+
+for key in sorted(list(l3_dict.keys())):
+    uni_dict[key] = uni_id
+    uni_id += 1
+
+for key in sorted(list(ko2id.keys())):
+    uni_dict[key] = uni_id
+    uni_id += 1
+
+att_id = []
+e_id_list = []
+
+for key in e2id.keys():
+
+    l1,l2,l3 = e2label[key]
+    att_id.append(uni_dict[l1])
+    e_id_list.append(e2id[key])
+
+    att_id.append(uni_dict[l2])
+    e_id_list.append(e2id[key])
+    
+    att_id.append(uni_dict[l3])
+    e_id_list.append(e2id[key])
+
+    if key in e2ko_list:
+        for ko in e2ko_list[key]:
+            att_id.append(uni_dict[ko])
+            e_id_list.append(e2id[key])    
+
+attr2e_index = torch.stack([torch.LongTensor(att_id), torch.LongTensor(e_id_list)])
+
+
+edge_id = uni_id
 
 
 reaction2edge_id = {}
@@ -62,6 +124,7 @@ r_edge = []
 print("train data number: %d" % (len(data["train"])))
 print("valid data number: %d" % (len(data["valid"])))
 print("test data number : %d" % (len(data["test"])))
+
 
 
 for c_list, e in data["train"]:
@@ -273,66 +336,6 @@ new_edge_type = torch.cat((edge_type_train, edge_type_valid2train),dim=-1)
 # 首先需要将ko 的 id 和 层次lable 进行混合编码：
 # 构造一个空白的embedding 作为 0 （这个地方存疑）
 
-with open("./aux_daa.json", 'r') as f:
-    aux_data = json.load(f)
-    # "ec_label_dict": lalbel_dict,
-    # "e2label": e2lable,
-    # "ko2id": ko2id,
-    # "e2ko_list": e2ko_list
-
-ec_label_dict = aux_data["ec_label_dict"]
-e2label = aux_data["e2label"]
-e2ko_list = aux_data["e2ko_list"]
-ko2id = aux_data["ko2id"]
-
-# 首先将两个东西所有的label 和 ko label 统一编码
-l1_dict = ec_label_dict["lable1"]
-l2_dict = ec_label_dict["lable2"]
-l3_dict = ec_label_dict["lable3"]
-
-
-uni_dict = {}
-uni_id = 0
-
-for key in sorted(list(l1_dict.keys())):
-    uni_dict[key] = uni_id
-    uni_id += 1
-
-for key in sorted(list(l2_dict.keys())):
-    uni_dict[key] = uni_id
-    uni_id += 1
-
-for key in sorted(list(l3_dict.keys())):
-    uni_dict[key] = uni_id
-    uni_id += 1
-
-for key in sorted(list(ko2id.keys())):
-    uni_dict[key] = uni_id
-    uni_id += 1
-
-att_id = []
-e_id_list = []
-
-for key in e2id.keys():
-
-    l1,l2,l3 = e2label[key]
-    att_id.append(uni_dict[l1])
-    e_id_list.append(e2id[key])
-
-    att_id.append(uni_dict[l2])
-    e_id_list.append(e2id[key])
-    
-    att_id.append(uni_dict[l3])
-    e_id_list.append(e2id[key])
-
-    if key in e2ko_list:
-        for ko in e2ko_list[key]:
-            att_id.append(uni_dict[ko])
-            e_id_list.append(e2id[key])    
-
-attr2e_index = torch.stack([torch.LongTensor(att_id), torch.LongTensor(e_id_list)])
-
-
 graph_info = {
     "train_edge_index": edge_index_train,
     "train_edge_type": edge_type_train,
@@ -343,6 +346,7 @@ graph_info = {
     "attr2e_index":attr2e_index,
     "c_num": c_num,
     "e_num": e_num,
+    "base_node_num":uni_id,
     "max_train_id": max_train_num,
     "max_edge_id":edge_id,
 }

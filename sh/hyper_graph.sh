@@ -69,5 +69,7 @@ CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_01 --save_path ./models/ce_data_new_01 &
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_02 --save_path ./models/ce_data_new_02 &
 
+# 添加了酶的属性
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_03 --save_path ./models/ce_data_new_03 &
-CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_04 --save_path ./models/ce_data_new_04 &
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_04 --save_path ./models/ce_data_new_04 &

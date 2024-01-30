@@ -127,6 +127,23 @@ class HyperCE(nn.Module):
                         head_fusion_mode=args.conv_args_head_fusion_mode,
                         edge_fusion_mode=args.conv_args_edge_fusion_mode,
                     )
+
+        self.attr2rel = HypergraphTransformer(
+                        in_channels=self.embedding_dim,
+                        out_channels=self.embedding_dim,
+                        attn_heads=args.conv_args_num_attention_heads,
+                        residual_beta=args.conv_args_residual_beta,
+                        learn_beta=args.conv_args_learn_beta,
+                        dropout=args.conv_args_conv_dropout_rate,
+                        trans_method=args.conv_args_trans_method,
+                        edge_dim=self.embedding_dim,
+                        rel_embed_dim=self.embedding_dim,
+                        negative_slope=args.conv_args_negative_slope,
+                        have_query_feature=True,
+                        head_fusion_mode=args.conv_args_head_fusion_mode,
+                        edge_fusion_mode=args.conv_args_edge_fusion_mode,
+                )
+        self.attr2rel_bn = nn.BatchNorm1d(self.embedding_dim)
         for _ in range(self.All_num_layers-1):
             self.E2EConvs.append(
                     HypergraphTransformer(
@@ -155,6 +172,9 @@ class HyperCE(nn.Module):
         self.v2e.reset_parameters()
         self.v2e_bn.reset_parameters()
         self.e2rel.reset_parameters()
+        self.attr2rel.reset_parameters()
+
+        self.attr2rel_bn.reset_parameters()
       
     def forward(self, n_id, x , adjs, lable,split_idx, cuda, mode="rel"):
         
@@ -167,7 +187,7 @@ class HyperCE(nn.Module):
             device=x.device
         )
         x = torch.cat([hyper_edge_emb,x], dim=0)
-
+    
         for idx in range(len(adjs)):
             adj_t, edge_attr,  edge_type, e_id, size = adjs[idx]
             edge_attr_embed, edge_type_embed = None, None
@@ -190,15 +210,26 @@ class HyperCE(nn.Module):
                 )
             else:
                 if idx == 0:
-                    x = self.v2e(
-                        (x, x_target),
-                        edge_index=adj_t,
-                        edge_attr_embed=edge_attr_embed,
-                        edge_type_embed=edge_type_embed,
-                        edge_time_embed=None,
-                        edge_dist_embed=None,
-                    )
-                    x = self.v2e_bn(x)
+                    if mode == "rel_attr":
+                        x = self.attr2rel(
+                                    (x, x_target),
+                                    edge_index=adj_t,
+                                    edge_attr_embed=None,
+                                    edge_type_embed=None,
+                                    edge_time_embed=None,
+                                    edge_dist_embed=None,
+                            )   
+                        x = self.attr2rel_bn(x)
+                    else:
+                        x = self.v2e(
+                            (x, x_target),
+                            edge_index=adj_t,
+                            edge_attr_embed=edge_attr_embed,
+                            edge_type_embed=edge_type_embed,
+                            edge_time_embed=None,
+                            edge_dist_embed=None,
+                        )
+                        x = self.v2e_bn(x)
                 else:
                     if mode == "rel":
                         x = self.e2rel(

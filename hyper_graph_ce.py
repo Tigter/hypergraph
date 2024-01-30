@@ -123,15 +123,14 @@ def test_inductive(model, sampler):
         if count % 50 == 0:
             print("test step count: %d" % count)
 
-        pos_data, rel_pos,rel_neg = data
+        # pos_data, rel_pos,rel_neg = data
 
-        n_id, x, adjs, lable,split_idx = pos_data
+        # n_id, x, adjs, lable,split_idx = pos_data
 
-        hyper_edge_emb = model.encoder(n_id,x, adjs, lable,split_idx, True)
-        # hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
-        batch_size = len(hyper_edge_emb)
-
-        score  = model.ce_predictor(hyper_edge_emb)
+        # hyper_edge_emb = model.encoder(n_id,x, adjs, lable,split_idx, True)
+        # # hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
+        # batch_size = len(hyper_edge_emb)
+        # score  = model.ce_predictor(hyper_edge_emb)
         # r_n_id, r_x, r_adjs,split_idx = rel_pos
         # relation_emb = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
         # rel_emb  = relation_emb.unsqueeze(1)
@@ -144,12 +143,14 @@ def test_inductive(model, sampler):
         # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
-
+        score, label,binery_label = model.score(data)
+        score = score[:,1:]
+        score = score.squeeze(-1)
         argsort = torch.argsort(score, dim = 1, descending=True)
-        for i in range(batch_size):
+        for i in range(score.shape[0]):
  
 
-            ranking = (argsort[i, :] == lable[i]).nonzero()
+            ranking = (argsort[i, :] == label[i]).nonzero()
             assert ranking.size(0) == 1
             ranking = 1 + ranking.item()
             logs.append({
@@ -183,6 +184,7 @@ if __name__=="__main__":
         modelConfig = config[args.configName]
 
     cuda = baseConfig['cuda']
+    # cuda = False
     init_step  = 0
     save_steps = baseConfig['save_step']
     n_size = modelConfig['n_size']
@@ -223,7 +225,7 @@ if __name__=="__main__":
     hyperConfig = HyperKGEConfig()
     hyperConfig.embedding_dim = modelConfig['dim']
     hyperConfig.gamma = modelConfig['gamma']
-    n_node = graph_info['c_num'] + graph_info["e_num"]
+    n_node = graph_info['base_node_num']
 
     model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'])
     model.node_emb = node_emb

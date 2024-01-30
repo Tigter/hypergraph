@@ -250,7 +250,6 @@ class HypergraphTransformer(MessagePassing):
         else:
             query = self.lin_query(x_i).view(-1, self.attn_heads, self.out_channels)
             alpha = (query * key).sum(dim=-1) / math.sqrt(self.out_channels)
-
         alpha = softmax(alpha, index, ptr, size_i)
         alpha = F.dropout(alpha, p=self.dropout, training=self.training)
 
