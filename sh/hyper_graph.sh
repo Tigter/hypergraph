@@ -73,3 +73,6 @@ CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_03 --save_path ./models/ce_data_new_03 &
 
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_04 --save_path ./models/ce_data_new_04 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_031 --save_path ./models/ce_data_rel_cat_03 &

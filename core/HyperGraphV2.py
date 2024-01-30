@@ -38,6 +38,10 @@ class HyperGraphV3(Module):
             torch.nn.Sigmoid()
         )
 
+        self.rel_merge = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim*2, hyperkgeConfig.embedding_dim),
+            torch.nn.Sigmoid()
+        )
         # self.loss_funcation = nn.CrossEntropyLoss()
         self.loss_funcation = nn.BCELoss()
         # self.loss_funcation = MRL(hyperkgeConfig.gamma)
@@ -81,6 +85,13 @@ class HyperGraphV3(Module):
         rel_emb = rel_emb.reshape(base_batch_size, -1, self.emb_size) # batch_size * n *dim
         return torch.cosine_similarity(ht, relation)
 
+    def rel_cat(self, relation_base, relation_attr):
+        rel_emb = torch.cat([relation_base,relation_attr],dim=-1)
+
+        rel_emb = self.rel_merge(relation_attr)
+        return rel_emb
+
+
     def get_rel_emb(self, rel_data):
         rel_base, rel_attr  = rel_data
         r_n_id, r_x, r_adjs,split_idx = rel_base
@@ -89,7 +100,7 @@ class HyperGraphV3(Module):
         r_n_id, r_x, r_adjs,split_idx = rel_attr
         relation_attr = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True, mode="rel_attr")
 
-        return relation_base + relation_attr
+        return self.rel_cat(relation_base, relation_attr)
     
     def mul_score(self, edge, rel):
         return torch.norm(edge*rel, dim=-1)
