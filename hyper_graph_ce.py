@@ -287,7 +287,7 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 :
+            if step % test_step == 0 and step != 0:
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)

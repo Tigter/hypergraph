@@ -118,9 +118,9 @@ class HyperGraphV3(Module):
         r_n_id, r_x, r_adjs,split_idx = rel_attr
         relation_attr = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True, mode="rel_attr")
         if mode == "train":
-            return  relation_attr + relation_base, self.cons_loss(relation_base, relation_attr)
+            return  self.rel_cat(relation_base, relation_attr), self.cons_loss(relation_base, relation_attr)
         else:
-            return  relation_attr + relation_base, None
+            return  self.rel_cat(relation_base, relation_attr), None
 
     # def get_rel_emb(self, rel_data):
     #     rel_base, rel_attr  = rel_data
@@ -133,7 +133,7 @@ class HyperGraphV3(Module):
     #     return relation_attr + relation_base
     
     def mul_score(self, edge, rel):
-        return torch.norm(edge*rel, dim=-1)
+        return F.Sigmoid(torch.norm(edge*rel, dim=-1))
     
     def mul_pre_score(self, edge, rel):
         return self.ce_predictor(edge*rel)
@@ -165,10 +165,10 @@ class HyperGraphV3(Module):
         batch_size = len(hyper_edge_emb)
         score = self.ce_predictor(hyper_edge_emb)
 
-        pos_rel,con_loss1 = self.get_rel_emb(rel_pos,mode)
+        pos_rel,con_loss1 = self.get_rel_emb(rel_pos,mode="test")
         pos_rel = pos_rel.unsqueeze(1)
 
-        neg_rel,con_loss2 = self.get_rel_emb(rel_neg,mode)
+        neg_rel,con_loss2 = self.get_rel_emb(rel_neg,mode="test")
         neg_rel = neg_rel.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
 
 
@@ -186,7 +186,7 @@ class HyperGraphV3(Module):
         # relation_emb_neg = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
         # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
         if mode == "train":
-            return score,lable,binery_label,con_loss1+con_loss2 # ,rel_emb, relation_emb_neg
+            return score,lable,binery_label, None #con_loss1+con_loss2 # ,rel_emb, relation_emb_neg
         else:
             return score,lable,binery_label # ,rel_emb, relation_emb_neg
     @staticmethod
@@ -202,7 +202,7 @@ class HyperGraphV3(Module):
         # n_score =  torch.cosine_similarity(hyper_edge_emb, relation_emb_neg)
         score, label,binery_label ,conLoss= model.score(data)
         binery_label = binery_label.cuda()
-        loss = model.loss_funcation(score, binery_label) + conLoss*config['cl_weight']
+        loss = model.loss_funcation(score, binery_label)# + conLoss*config['cl_weight']
 
         loss.backward()
         optimizer.step()

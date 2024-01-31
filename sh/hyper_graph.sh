@@ -86,9 +86,10 @@ CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName base_031 --save_path ./models/ce_data_rel_add_score_mul_pre_01 &
 
 
-CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/ce_data_rel_cat_score_mul_pre_01 &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/ce_data_rel_cat_score_mul_pre_01 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName base_033 --save_path ./models/ce_data_rel_add_con_loss_score_mul_pre_01 &
 
-CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/ce_data_rel_add_con_loss_score_mul_pre_01 &
 
-
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/ce_data_rel_cat_score_mul_01 &
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/ce_data_rel_cat_score_mul_01 &
 
