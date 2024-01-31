@@ -99,3 +99,23 @@ base_031:
   cl_temp: 1.0
   neibor_size: [30,5]
   data_reverse: False
+
+base_032: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 200
+  lr: 0.0005
+  decay: 0.1
+  max_step: 1000
+  layer: 2
+  n_size: 100
+  test_step: 100
+  reg_weight: 0.00005
+  conf_neg_weight: 0.5
+  vio_neg_weight: 1
+  cl_nsize: 100
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,5]
+  data_reverse: False

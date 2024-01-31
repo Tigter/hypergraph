@@ -91,6 +91,16 @@ class HyperGraphV3(Module):
         return rel_emb
 
 
+    # def get_rel_emb(self, rel_data):
+    #     rel_base, rel_attr  = rel_data
+    #     r_n_id, r_x, r_adjs,split_idx = rel_base
+    #     relation_base = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
+
+    #     r_n_id, r_x, r_adjs,split_idx = rel_attr
+    #     relation_attr = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True, mode="rel_attr")
+
+    #     return self.rel_cat(relation_base, relation_attr)
+
     def get_rel_emb(self, rel_data):
         rel_base, rel_attr  = rel_data
         r_n_id, r_x, r_adjs,split_idx = rel_base
@@ -99,7 +109,7 @@ class HyperGraphV3(Module):
         r_n_id, r_x, r_adjs,split_idx = rel_attr
         relation_attr = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True, mode="rel_attr")
 
-        return self.rel_cat(relation_base, relation_attr)
+        return relation_attr + relation_base
     
     def mul_score(self, edge, rel):
         return torch.norm(edge*rel, dim=-1)
@@ -111,7 +121,7 @@ class HyperGraphV3(Module):
         if edge.shape[1] != rel.shape[1]:
             edge = edge.repeat(1,rel.shape[1],1)
         combine = torch.cat([edge, rel],dim=-1)
-        score = self.ce_predictor(combine)    
+        score = self.ce2_predictor(combine)    
         return score
     
     def combine_score(self, edge, rel):
