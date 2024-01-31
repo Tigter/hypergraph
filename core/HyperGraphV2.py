@@ -151,8 +151,8 @@ class HyperGraphV3(Module):
         neg_rel = neg_rel.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
 
 
-        pos_score = self.cat_pre_score(hyper_edge_emb, pos_rel)
-        neg_score = self.cat_pre_score(hyper_edge_emb, neg_rel)
+        pos_score = self.mul_pre_score(hyper_edge_emb, pos_rel)
+        neg_score = self.mul_pre_score(hyper_edge_emb, neg_rel)
 
         score = torch.cat([pos_score,neg_score ], dim=1)
 
