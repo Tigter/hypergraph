@@ -1,0 +1,58 @@
+# TransC 的第一个实验
+
+baseConfig:
+  cuda: True
+  do_train: True
+  batch_size: 1024
+  n_size: 400
+  max_step: 150000
+  log_step: 1000
+  save_step: 10000
+  valid_step: 10000
+  adv_temp: 1
+  data_reverse: False
+
+
+10-20test:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 5
+   dim: 200
+   lr: 0.0005
+   decay: 0.1
+   train_ins: True
+   train_SubOf: True
+   train_typeOf: True
+
+transC_instance:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 5
+   dim: 200
+   lr: 0.0005
+   decay: 0.1
+   train_ins: True
+   train_SubOf: False
+   train_typeOf: False
+
+transC_typeOf:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 5
+   dim: 200
+   lr: 0.0005
+   decay: 0.1
+   train_ins: False
+   train_SubOf: False
+   train_typeOf: True
+
+transC_SubOf:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 1
+   dim: 200
+   lr: 0.0005
+   decay: 0.1
+   train_ins: False
+   train_SubOf: True
+   train_typeOf: False

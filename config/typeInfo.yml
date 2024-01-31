@@ -1,0 +1,55 @@
+# 
+
+baseConfig:
+  cuda: True
+  do_train: True
+  batch_size: 512
+  n_size: 500
+  max_step: 150001
+  log_step: 1000
+  save_step: 10000
+  valid_step: 10000
+  test_step: 10000
+  adv_temp: 1
+  train_type: 1toN
+  data_reverse: False
+
+
+TuckER_base:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 5
+   e_dim: 200
+   r_dim: 30
+   dropout1: 0.2
+   dropout2: 0.2
+   dropout3: 0.2
+   label_smoothing: 0.1
+   lr: 0.001
+   decay: 0.95
+   decay_step: 10000
+   max_step: 300000
+
+
+TuckER_typeDiff:
+   g_ins: 9
+   g_type: 5
+   g_subOf: 5
+   e_dim: 200
+   r_dim: 30
+   dropout1: 0.2
+   dropout2: 0.2
+   dropout3: 0.2
+   label_smoothing: 0
+   lr: 0.001
+   decay: 0.99
+   decay_step: 10000
+   max_step: 200000
+
+boxLevel_test:
+   gamma: 0.3
+   e_dim: 200
+   r_dim: 30
+   lr: 0.005
+   decay: 0.2
+   decay_step: 10000

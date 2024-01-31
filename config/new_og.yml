@@ -1,0 +1,52 @@
+
+baseConfig:
+  cuda: True
+  do_train: True
+  batch_size: 1024
+  n_size: 400
+  max_step: 150001
+  log_step: 1000
+  save_step: 10000
+  valid_step: 10000
+  adv_temp: 1
+  data_reverse: False
+
+transe_base_01:
+  batch_size: 1024
+  name: TransE
+  dataset: YAGO
+  g_base: 10
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 100001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.001
+  data_inverse: False
+  use_og: False
+
+transe_yago_og_01:
+  batch_size: 1024
+  name: TransE
+  dataset: YAGO
+  g_base: 10
+  g_conf: 10
+  g_voi: 11
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 100001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.001
+  data_inverse: False
+  use_og: True

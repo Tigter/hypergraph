@@ -143,7 +143,7 @@ def test_inductive(model, sampler):
         # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
-        score, label,binery_label = model.score(data)
+        score, label,binery_label = model.score(data,mode="test")
         score = score[:,1:]
         score = score.squeeze(-1)
         argsort = torch.argsort(score, dim = 1, descending=True)
@@ -295,7 +295,7 @@ if __name__=="__main__":
                 logset.log_metrics('Valid ',step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in sampler:
-                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation)
+                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig)
                 baselog.append(log)
             if step % 10 == 0:
                 logging_log(step, baselog, writer)

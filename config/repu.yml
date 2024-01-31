@@ -1,0 +1,22 @@
+baseConfig:
+  cuda: True
+  do_train: True
+  test: False
+  batch_size: 1024
+  n_size: 400
+  
+  log_step: 1000
+  save_step: 10000
+  valid_step: 10000
+  adv_temp: 1
+  test_step: 10000
+  data_reverse: False
+
+semrota_debug:
+  max_step: 150001
+  dim: 500
+  gamma: 24
+  n_size: 400
+  lr: 0.0002
+  decay: 0.2
+  loss_weight: 0.1

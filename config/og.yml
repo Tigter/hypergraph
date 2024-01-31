@@ -1,0 +1,627 @@
+# TransC 的第一个实验
+
+baseConfig:
+  cuda: True
+  do_train: True
+  batch_size: 1024
+  n_size: 400
+  max_step: 150001
+  log_step: 1000
+  save_step: 10000
+  valid_step: 10000
+  adv_temp: 1
+  data_reverse: False
+
+og_debug:
+   g_base: 1
+   g_conf: 1
+   g_voi: 1.5
+   dim: 200
+   lr: 0.0005
+   decay: 0.1
+
+
+rotpro_test:
+  g_base: 2
+  g_conf: 2
+  g_voi: 2.5
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+
+rotpro_adv_test:
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+  n_size: 400
+  test_step: 40000
+
+# 修改了数据集
+rotpro_adv_test_1:
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+  n_size: 400
+  test_step: 40000
+
+rotpro_adv_base:
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+  n_size: 400
+
+rotpro_base:
+  g_base: 2
+  g_conf: 1
+  g_voi: 1.5
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+  n_size: 400
+
+rotpro_base_01:
+  g_base: 3
+  g_conf: 1
+  g_voi: 1.5
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200000
+  n_size: 400
+
+
+rotpro_adv_1102:
+  name: rotpro
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 1.2
+  LossType: NALL_chen
+  data_inverse: False
+
+rotpro_mrl_softmax_1103:
+  name: rotpro
+  dataset: YAGO
+  g_base: 2
+  g_conf: 2
+  g_voi: 2.2
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 1.5
+  LossType: MRL_Soft
+  data_inverse: False
+
+rotpro_adv_sub_1103:
+  name: rotpro
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  beta: 1.5
+  alpha: 0.0005
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  data_inverse: False
+
+convkb_base:
+  batch_size: 512
+  name: ConvKB
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.00005
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 300001
+  n_size: 200
+  test_step: 40000
+  dropout: 0.3
+  out_channels: 50
+  kernel_size: 1
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.001
+  data_inverse: False
+
+complex_base_01:
+  batch_size: 1024
+  name: ComplEx
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.001
+  data_inverse: False
+
+complex_base_02:
+  batch_size: 1024
+  name: ComplEx
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.03
+  data_inverse: False
+
+complex_base_03:
+  batch_size: 1024
+  name: ComplEx
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+
+simple_base_01:
+  batch_size: 1024
+  name: SimplE
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.03
+  data_inverse: False
+
+
+simple_base_02:
+  batch_size: 1024
+  name: SimplE
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 200001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.00005
+  data_inverse: False
+
+simple_base_03:
+  batch_size: 1024
+  name: SimplE
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 40000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+
+
+complex_FB_base_01:
+  batch_size: 1024
+  name: ComplEx
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+complex_FB_base_02:
+  batch_size: 1024
+  name: ComplEx
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+complex_FB_base_03:
+  batch_size: 1024
+  name: ComplEx
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+complex_FB_base_04:
+  batch_size: 1024
+  name: ComplEx
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.0005
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+simple_FB_base_01:
+  batch_size: 1024
+  name: SimplE
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+simple_FB_base_02:
+  batch_size: 1024
+  name: SimplE
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+simple_FB_base_03:
+  batch_size: 1024
+  name: SimplE
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.0005
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+complex_NELL_base_01:
+  batch_size: 1024
+  name: ComplEx
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+complex_NELL_base_02:
+  batch_size: 1024
+  name: ComplEx
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 100
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+simple_NELL_base_01:
+  batch_size: 1024
+  name: SimplE
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+simple_NELL_base_02:
+  batch_size: 1024
+  name: SimplE
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+simple_NELL_base_03:
+  batch_size: 1024
+  name: SimplE
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.0005
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.01
+  data_inverse: False
+
+simple_NELL_base_04:
+  batch_size: 1024
+  name: SimplE
+  dataset: NELL-995
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 200
+  lr: 0.0005
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 256
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.005
+  data_inverse: False
+
+complex_n3_yago_base_01:
+  batch_size: 1024
+  name: ComplEx
+  dataset: YAGO
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.005
+  data_inverse: False
+
+complex_n3_fb_base_01:
+  batch_size: 1024
+  name: ComplEx
+  dataset: FB15-237
+  g_base: 16
+  g_conf: 16
+  g_voi: 16
+  dim: 500
+  lr: 0.0001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.05
+  data_inverse: False
+
+transe_yago_base_01:
+  batch_size: 1024
+  name: TransE
+  dataset: YAGO
+  g_base: 2
+  g_conf: 2
+  g_voi: 1.5
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0
+  data_inverse: False
+
+distmult_yago_base_01:
+  batch_size: 1024
+  name: DistMult
+  dataset: YAGO
+  g_base: 2
+  g_conf: 2
+  g_voi: 2.5
+  dim: 200
+  lr: 0.001
+  decay: 0.1
+  gammma_m:  0.000001
+  max_step: 150001
+  n_size: 400
+  test_step: 20000
+  LossAug: 0.3
+  LossType: NALL_sub
+  reg_weight: 0.03
+  data_inverse: False
+
+
+
+### og 实验重启的配置
