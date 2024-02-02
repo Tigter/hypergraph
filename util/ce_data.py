@@ -10,8 +10,8 @@ import math
 
 def load_data():
 
-    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_new_graph_info.pkl")
-    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_new_train_info.pkl")
+    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_single_graph_info.pkl")
+    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_single_train_info.pkl")
     return graph_info, train_info
 
 
@@ -33,13 +33,13 @@ def build_graph_sampler(config):
     
     valid_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["valid_id_list"],
-            batch_size=8,
+            batch_size=16,
             size=config["neibor_size"],
              mode="valid"
             )
     test_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["test_id_list"],
-            batch_size=8,
+            batch_size=16,
             size=config["neibor_size"],
              mode="valid"
             )
@@ -89,8 +89,6 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         
         if mode == "train":
             self.mask_true = self.train_info["edgeid2true_train"]
-            # self.n_size = 2
-            # self.batch_size = 2
         else:
             self.mask_true = self.train_info["edgeid2true_all"]
             self.n_size = 5000
@@ -160,15 +158,16 @@ class CEGraphSampler(torch.utils.data.DataLoader):
                 split_idx = len(n_id)
             size = adj_t.sparse_sizes()[::-1]
             adjs.append((adj_t, edge_attr,  edge_type, e_id, size))
+
         adjs = adjs[0] if len(adjs) == 1 else adjs[::-1]
+
         input_x =  self.node_emb[n_id[split_idx:]]
-        
-        rel_pos_out = self.relation_sampler.sample(lable,self.mode)
+        # rel_pos_out = self.relation_sampler.sample(lable,self.mode)
         out = (n_id,input_x, adjs, lable - self.c_num,split_idx)
-        neg_list = self.gen_neg_rel(batch)
-        negative_sample = np.concatenate(neg_list)
-        rel_neg_out = self.relation_sampler.sample(negative_sample,self.mode)
-        # rel_pos_out,rel_neg_out = None, None
+        # neg_list = self.gen_neg_rel(batch)
+        # negative_sample = np.concatenate(neg_list)
+        # rel_neg_out = self.relation_sampler.sample(negative_sample,self.mode)
+        rel_pos_out,rel_neg_out = None, None
         return out,rel_pos_out,rel_neg_out
     
     def gen_neg_rel(self, n_ids):
@@ -287,7 +286,6 @@ class RelationSampler(torch.utils.data.DataLoader):
         adjs.append((adj_t,edge_attr,edge_type, e_id, size))
         out = (n_id, self.node_emb[n_id[split_idx:]], adjs,split_idx)
         return out
-
 
     def __repr__(self):
         return '{}(sizes={})'.format(self.__class__.__name__, self.sizes)

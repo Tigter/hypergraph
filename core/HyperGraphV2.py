@@ -15,35 +15,35 @@ from loss import *
 from core.HypergraphTransformer import HypergraphTransformer
 
 class HyperGraphV3(Module):
-    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100):
+    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None):
         super(HyperGraphV3, self).__init__()
 
         self.hyperkgeConfig = hyperkgeConfig
-        self.encoder = HyperCE(hyperkgeConfig,n_node,n_hyper_edge)
+        self.encoder = HyperCE(hyperkgeConfig,n_node,n_hyper_edge,e_num,graph_info)
 
+        self.ce_predictor = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim, e_num),
+            torch.nn.Sigmoid()
+        )
         # self.ce_predictor = torch.nn.Sequential(
-        #     torch.nn.Linear(hyperkgeConfig.embedding_dim, e_num),
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
         #     torch.nn.Sigmoid()
         # )
-        self.ce_predictor = torch.nn.Sequential(
-            torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
-            torch.nn.Sigmoid()
-        )
-        self.ce2_predictor = torch.nn.Sequential(
-            torch.nn.Linear(hyperkgeConfig.embedding_dim*2, 1),
-            torch.nn.Sigmoid()
-        )
-        self.ce_half = torch.nn.Sequential(
-            torch.nn.Linear(hyperkgeConfig.embedding_dim*2, hyperkgeConfig.embedding_dim),
-            torch.nn.Sigmoid()
-        )
+        # self.ce2_predictor = torch.nn.Sequential(
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim*2, 1),
+        #     torch.nn.Sigmoid()
+        # )
+        # self.ce_half = torch.nn.Sequential(
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim*2, hyperkgeConfig.embedding_dim),
+        #     torch.nn.Sigmoid()
+        # )
 
-        self.rel_merge = torch.nn.Sequential(
-            torch.nn.Linear(hyperkgeConfig.embedding_dim*2, hyperkgeConfig.embedding_dim),
-            torch.nn.Sigmoid()
-        )
-        # self.loss_funcation = nn.CrossEntropyLoss()
-        self.loss_funcation = nn.BCELoss()
+        # self.rel_merge = torch.nn.Sequential(
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim*2, hyperkgeConfig.embedding_dim),
+        #     torch.nn.Sigmoid()
+        # )
+        self.loss_funcation = nn.CrossEntropyLoss()
+        # self.loss_funcation = nn.BCELoss()
         # self.loss_funcation = MRL(hyperkgeConfig.gamma)
 
     def init_parameters(self):
@@ -93,6 +93,7 @@ class HyperGraphV3(Module):
     def cons_loss(self, rel_base, rel_attr):
         sim_matrix = rel_base @ rel_attr.transpose(0,1)
         batch_size = len(sim_matrix)
+        sim_matrix = torch.sigmoid(sim_matrix)
         pos_sim = sim_matrix[range(batch_size), range(batch_size)]
         loss = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
         loss = - torch.log(loss).mean()
@@ -133,7 +134,7 @@ class HyperGraphV3(Module):
     #     return relation_attr + relation_base
     
     def mul_score(self, edge, rel):
-        return F.Sigmoid(torch.norm(edge*rel, dim=-1))
+        return torch.sigmoid(torch.norm(edge*rel, dim=-1))
     
     def mul_pre_score(self, edge, rel):
         return self.ce_predictor(edge*rel)
@@ -155,40 +156,56 @@ class HyperGraphV3(Module):
         score = self.ce2_predictor(total_emb)
         return score
 
-    def score(self, data, mode="train"):
+    # def score(self, data, mode="train"):
+    #     pos_data, rel_pos,rel_neg = data
+
+    #     n_id, x, adjs, lable,split_idx = pos_data
+
+    #     hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
+    #     hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
+    #     batch_size = len(hyper_edge_emb)
+    #     # score = self.ce_predictor(hyper_edge_emb)
+
+    #     pos_rel,con_loss1 = self.get_rel_emb(rel_pos,mode)
+    #     pos_rel = pos_rel.unsqueeze(1)
+
+    #     neg_rel,con_loss2 = self.get_rel_emb(rel_neg,mode)
+    #     neg_rel = neg_rel.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
+
+
+    #     pos_score = self.mul_pre_score(hyper_edge_emb, pos_rel)
+    #     neg_score = self.mul_pre_score(hyper_edge_emb, neg_rel)
+
+    #     score = torch.cat([pos_score,neg_score ], dim=1)
+
+    #     binery_label = torch.zeros_like(score)
+    #     binery_label[:,0] = 1
+
+    #     # relation_emb = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
+    #     # rel_emb  = relation_emb.unsqueeze(1)
+    #     # r_n_id, r_x, r_adjs,split_idx = rel_neg
+    #     # relation_emb_neg = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
+    #     # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
+    #     if mode == "train":
+    #         return score,lable,binery_label,con_loss1+con_loss2 # ,rel_emb, relation_emb_neg
+    #     else:
+    #         return score,lable,binery_label # ,rel_emb, relation_emb_neg
+    
+    def lable_predict(self, data, mode="train"):
         pos_data, rel_pos,rel_neg = data
 
         n_id, x, adjs, lable,split_idx = pos_data
 
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
-        hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
-        batch_size = len(hyper_edge_emb)
-        score = self.ce_predictor(hyper_edge_emb)
+        score  = self.ce_predictor(hyper_edge_emb)
 
-        pos_rel,con_loss1 = self.get_rel_emb(rel_pos,mode="test")
-        pos_rel = pos_rel.unsqueeze(1)
+        return score, lable
 
-        neg_rel,con_loss2 = self.get_rel_emb(rel_neg,mode="test")
-        neg_rel = neg_rel.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
+        # if mode == "train":
+        #     return score,lable,binery_label,con_loss1+con_loss2 # ,rel_emb, relation_emb_neg
+        # else:
+        #     return score,lable,binery_label # ,rel_emb, relation_emb_neg
 
-
-        pos_score = self.mul_pre_score(hyper_edge_emb, pos_rel)
-        neg_score = self.mul_pre_score(hyper_edge_emb, neg_rel)
-
-        score = torch.cat([pos_score,neg_score ], dim=1)
-
-        binery_label = torch.zeros_like(score)
-        binery_label[:,0] = 1
-
-        # relation_emb = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # rel_emb  = relation_emb.unsqueeze(1)
-        # r_n_id, r_x, r_adjs,split_idx = rel_neg
-        # relation_emb_neg = self.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, self.hyperkgeConfig.embedding_dim)
-        if mode == "train":
-            return score,lable,binery_label, None #con_loss1+con_loss2 # ,rel_emb, relation_emb_neg
-        else:
-            return score,lable,binery_label # ,rel_emb, relation_emb_neg
     @staticmethod
     def train_step(model,optimizer,data,loss_funcation, margin=0.2, rel_samper=None, config=None):
         optimizer.zero_grad()
@@ -200,9 +217,10 @@ class HyperGraphV3(Module):
 
         # p_score = torch.cosine_similarity(hyper_edge_emb, rel_emb)
         # n_score =  torch.cosine_similarity(hyper_edge_emb, relation_emb_neg)
-        score, label,binery_label ,conLoss= model.score(data)
-        binery_label = binery_label.cuda()
-        loss = model.loss_funcation(score, binery_label)# + conLoss*config['cl_weight']
+    
+        score, label= model.lable_predict(data)
+        label = label.cuda()
+        loss = model.loss_funcation(score, label)
 
         loss.backward()
         optimizer.step()

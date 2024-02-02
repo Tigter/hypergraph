@@ -120,7 +120,7 @@ def test_inductive(model, sampler):
     count = 0
     for data in sampler:
         count += 1
-        if count % 50 == 0:
+        if count % 400 == 0:
             print("test step count: %d" % count)
 
         # pos_data, rel_pos,rel_neg = data
@@ -143,13 +143,13 @@ def test_inductive(model, sampler):
         # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
-        score, label,binery_label = model.score(data,mode="test")
-        score = score[:,1:]
-        score = score.squeeze(-1)
-        argsort = torch.argsort(score, dim = 1, descending=True)
-        for i in range(score.shape[0]):
- 
 
+        score, label = model.lable_predict(data,mode="test")
+        # score = score[:,1:]
+        # score = score.squeeze(-1)
+        argsort = torch.argsort(score, dim = 1, descending=True)
+
+        for i in range(score.shape[0]):
             ranking = (argsort[i, :] == label[i]).nonzero()
             assert ranking.size(0) == 1
             ranking = 1 + ranking.item()
@@ -227,7 +227,7 @@ if __name__=="__main__":
     hyperConfig.gamma = modelConfig['gamma']
     n_node = graph_info['base_node_num']
 
-    model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'])
+    model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info)
     model.node_emb = node_emb
     if cuda:
         model = model.cuda()

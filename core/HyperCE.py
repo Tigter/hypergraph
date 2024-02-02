@@ -38,15 +38,41 @@ class HyperKGEConfig:
     gamma = 10
 
 class EdgeEmbedding(torch.nn.Module):
-    def __init__(self, embed_size, fusion_type, num_edge_type):
+    def __init__(self, embed_size, fusion_type, num_edge_type,graph_info=None):
         super(EdgeEmbedding, self).__init__()
         self.embed_size = embed_size
         self.fusion_type = fusion_type
-        self.edge_type_embedding = nn.Embedding(num_edge_type, self.embed_size)
+
+        attr2e_index = graph_info["attr2e_index"]
+
+        attr_num = graph_info["base_node_num"] - graph_info["c_num"] - graph_info["e_num"]
+
+        print("attr_num: %d" % attr_num)
+        attr_emb = nn.Embedding(attr_num, self.embed_size)
+        init_range = 6/math.sqrt(self.embed_size)
+        nn.init.uniform_(attr_emb.weight, -init_range, init_range)
+
+        edge_type = torch.zeros(num_edge_type, self.embed_size)
+        times_count = {}
+
+        for i in range(len(attr2e_index[0])):
+            type_id = attr2e_index[1][i] -  graph_info["c_num"]
+            attr_id = attr2e_index[0][i] - graph_info["c_num"] - graph_info["e_num"]
+
+            edge_type[type_id] += attr_emb(attr_id)
+            if type_id.item() not in times_count:
+                times_count[type_id.item()] = 0
+            times_count[type_id.item()] += 1
+        
+        for i in range(len(edge_type)-1):
+            edge_type[i] = edge_type[i] / times_count[i]
+
+        self.edge_type_embedding = nn.Parameter(edge_type)
         self.output_embed_size = self.embed_size
 
+
     def forward(self, data):
-        embedding_list = [self.edge_type_embedding(data.long())]
+        embedding_list = [self.edge_type_embedding[data.long()]]
 
         if self.fusion_type == 'concat':
             self.output_embed_size = len(embedding_list) * self.embed_size
@@ -58,7 +84,7 @@ class EdgeEmbedding(torch.nn.Module):
 
 # 需要理解这段代码，具体是如何完成图卷积的模型的
 class HyperCE(nn.Module):
-    def __init__(self, args, n_node,n_hyper_edge):
+    def __init__(self, args, n_node,n_hyper_edge,e_num,graph_info):
         super(HyperCE, self).__init__()
         """
         args should contain the following:
@@ -84,12 +110,14 @@ class HyperCE(nn.Module):
         self.edge_type_embedding_layer = EdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
-            num_edge_type=2
+            num_edge_type=e_num+1,
+            graph_info=graph_info,
         )
         self.edge_attr_embedding_layer = EdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
-            num_edge_type=2
+            num_edge_type=e_num+1,
+            graph_info=graph_info
         )
         self.E2EConvs = nn.ModuleList()
         self.bnE2Es = nn.ModuleList()

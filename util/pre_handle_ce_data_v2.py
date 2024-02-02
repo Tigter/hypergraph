@@ -105,10 +105,14 @@ def add_attr_id_to_e():
 
 attr2e_index = add_attr_id_to_e()
 
+
+base_node_num = uni_id
+
 edge_id = uni_id
 
 
-reaction2edge_id = {}
+
+e2edgeId = defaultdict(set)
 edgeid2label = {}
 edgeid2true_train = defaultdict(set)
 edgeid2true_all = defaultdict(set)
@@ -125,11 +129,6 @@ re_node = []
 c_node = []
 r_edge = []
 
-print("train data number: %d" % (len(data["train"])))
-print("valid data number: %d" % (len(data["valid"])))
-print("test data number : %d" % (len(data["test"])))
-
-
 for c_list, e in data["train"]:
     for c in c_list:
         c_node.append(c2id[c])
@@ -137,6 +136,8 @@ for c_list, e in data["train"]:
 
     re_node.append(e2id[e])
     rr_edge.append(edge_id)
+
+    e2edgeId[e2id[e]].add(edge_id)
 
     edgeid2label[edge_id]= e2id[e]
     edgeid2true_train[edge_id].add(e2id[e])
@@ -148,8 +149,7 @@ for c_list, e in data["train"]:
     edge_id += 1
 
 
-
-train_hyper_edge_num = edge_id - (c_num + e_num)
+train_hyper_edge_num = edge_id - base_node_num
 print("train hyper edge number: %d" % train_hyper_edge_num)
 
 max_train_num = edge_id
@@ -194,7 +194,7 @@ for c_list, e in data["test"]:
     cl2e[tuple(c_list)].append(e)
     edge_id += 1
 
-valid_test_edge_num  = edge_id - train_hyper_edge_num - (c_num + e_num)
+valid_test_edge_num  = edge_id - train_hyper_edge_num - base_node_num
 
 print("valid hyperedge num: %d" % valid_test_edge_num)
 
@@ -202,15 +202,9 @@ print("valid hyperedge num: %d" % valid_test_edge_num)
 # 构建实体和超边之间的连接
 entity_edge = r_edge + val_r_edge
 entity = c_node + val_c_node
-# v2e = SparseTensor(
-#             row=torch.as_tensor(entity_edge, dtype=torch.long) ,
-#             col=torch.as_tensor(entity, dtype=torch.long),
-#             value=torch.as_tensor(range(0, len(entity)), dtype=torch.long)
-# )
-# v2e_index = torch.stack([v2e.storage.col(), v2e.storage.row()])
 v2e_index = torch.stack([torch.as_tensor(entity, dtype=torch.long), torch.as_tensor(entity_edge, dtype=torch.long)])
 
-# 建立酶和超边之间的连接
+# 建立酶和超边之间的连接:只在训练图当中
 e2r_index = torch.stack([torch.LongTensor(rr_edge), torch.LongTensor(re_node)])
 
 
@@ -219,7 +213,7 @@ print("Entity and Edge: %s" % (str(v2e_index.shape)))
 
 # 能够完成训练集当中，化合物和超边之间的连接
 # 构建训练集当中节点和超边之间的关联
-r_edge_temp = [c - c_num - e_num for c in r_edge]
+r_edge_temp = [c - base_node_num for c in r_edge]
 edge2entity_train = coo_matrix((
     np.ones(len(c_node)),
     (np.array(c_node), np.array(r_edge_temp))), shape=(c_num, train_hyper_edge_num)).tocsr()
@@ -227,54 +221,58 @@ edge2entity_train = coo_matrix((
 edge2edge_train = edge2entity_train.T * edge2entity_train
 share_entity = edge2edge_train.tocoo()
 
-share_entity_row_entity = share_entity.row 
-share_entity_col_entity = share_entity.col 
-edge_type_node = np.zeros_like(share_entity_row_entity)
+share_entity_row_entity = torch.LongTensor(share_entity.row) + base_node_num
+share_entity_col_entity =  torch.LongTensor(share_entity.col) + base_node_num
+edge_type_node = torch.LongTensor([e_num for i in range(len(share_entity_col_entity))])
 
 
-r_edge_temp = [c - c_num - e_num for c in rr_edge]
-re_node_temp = [c - c_num  for c in re_node]
-edge2rel_train = coo_matrix((
-    np.ones(len(re_node_temp)),
-    (np.array(re_node_temp), np.array(r_edge_temp))), shape=(e_num, train_hyper_edge_num)).tocsr()
+# 这里修改共享酶的超边之间的连接：
+def share_e(e2edgeId, c_num):
+    node1 = []
+    node2 = []
+    edge_type = []
 
-edge2edge_rel_train = edge2rel_train.T * edge2rel_train
-shared_rel = edge2edge_rel_train.tocoo()
+    # e_list = sorted(list(e2edgeId.keys()))
+    count = 0
+    for e in e2edgeId.keys():
+        edge_list = list(e2edgeId[e])
+        for i in range(len(edge_list)):
+            for j in range(i+1, len(edge_list)):
+                edge1 = edge_list[i]
+                edge2 = edge_list[j]
 
-share_entity_row_rel = shared_rel.row 
-share_entity_col_rel = shared_rel.col 
-edge_type_node_rel = np.ones_like(share_entity_row_rel)
+                node1.append(edge1)
+                node2.append(edge2)
+
+                node1.append(edge2)
+                node2.append(edge1)
+                edge_type.append(e - c_num)
+                edge_type.append(e - c_num)
+                count +=1 
+                if count % 10000 == 0: 
+                    print("count : %d" % count)
+
+    node1, node2, edge_type  = torch.LongTensor(node1),torch.LongTensor(node2),torch.LongTensor(edge_type)
+    return node1, node2, edge_type
+
+shareE_node1 , shareE_node, shareE_edge_type = share_e(e2edgeId, c_num)
+print("shared caculte over")
+
+print("share c conntint: %d " % len(share_entity_row_entity))
+print("share e conntint: %d " % len(shareE_node1))
 
 # train 数据中超边和超边之间的连接
-edge_index_row = torch.LongTensor(np.concatenate([share_entity_row_entity,share_entity_row_rel]))
-edge_index_col = torch.LongTensor(np.concatenate([share_entity_col_entity,share_entity_col_rel]))
-edge_type_train = torch.LongTensor(np.concatenate([edge_type_node, edge_type_node_rel]))
+edge_index_row = torch.cat([share_entity_row_entity,shareE_node1],dim=-1)
+edge_index_col = torch.cat([share_entity_col_entity,shareE_node],dim=-1)
+edge_type_train = torch.cat([edge_type_node, shareE_edge_type],dim=-1)
 edge_index_train = torch.stack([
-    edge_index_row + c_num + e_num,
-    edge_index_col +  c_num + e_num
+    edge_index_row ,
+    edge_index_col
 ])
 
-# 计算超边和超边之间的平均情况
-# edge2number = {}
-# for i in range(0,train_hyper_edge_num):
-#     edge2number[i] = 0
-
-# for i in range(len(share_entity_row)):
-#     edge2number[share_entity_row[i]] += 1
-#     # edge2number[share_entity_col[i]] += 1
-# number_list = []
-# for key in edge2number.keys():
-#     number_list.append(edge2number[key])
-
-# print("train graph hyperedge connect number min: %d" % (np.min(number_list)))
-# print("train graph hyperedge connect number max: %d" % (np.max(number_list)))
-# print("train graph hyperedge connect number mean: %d" % (np.mean(number_list)))
-# print("train graph hyperedge connect number mean: %d" % (np.median(number_list)))
-# print("train graph hyperedge connect number 1: %d" % (number_list.count(1)))
 
 
-# 测试和验证数据，超边和实体之间的连接，稀疏矩阵，下标从0开始
-
+# 测试数据当中超边到训练图的连接，通过共享实体连接起来
 val_c_node_temp = val_c_node
 val_r_edge_temp = [c - max_train_num for c in val_r_edge]
 
@@ -284,57 +282,22 @@ edge2entity_valid = coo_matrix((
 
 valid2train_edge = edge2entity_valid.T * edge2entity_train
 share_entity = valid2train_edge.tocoo()
-print(share_entity.shape)
-share_entity_row = share_entity.row 
-share_entity_col = share_entity.col 
-edge_type_node = np.zeros_like(share_entity_row)
+share_entity_row = torch.LongTensor(share_entity.row)
+share_entity_col = torch.LongTensor(share_entity.col)
 
+print(torch.max(share_entity_row))
+print(torch.max(share_entity_col))
 
-val_re_edge_temp =[c - max_train_num for c in val_re_edge]
-val_re_node_temp =[c - c_num for c in val_e_node]
+edge_type_node_valid = torch.LongTensor(np.zeros_like(share_entity_row)) + e_num
 
-
-edge2rel_valid = coo_matrix((
-    np.ones(len(val_re_node_temp)),
-    (np.array(val_re_node_temp), np.array(val_re_edge_temp))), shape=(e_num, valid_test_edge_num )).tocsr()
-
-valid2train_edge_share_rel = edge2rel_valid.T * edge2rel_train
-share_rel = valid2train_edge_share_rel.tocoo()
-share_rel_row = share_rel.row 
-share_rel_col = share_rel.col 
-edge_type_node_rel = np.ones_like(share_rel_row)
-
-
-edge_type_valid2train = torch.LongTensor(np.concatenate([edge_type_node,edge_type_node_rel]))
-edge_index_row = torch.LongTensor(np.concatenate([share_entity_row, share_rel_row]))
-edge_index_col = torch.LongTensor(np.concatenate([share_entity_col,share_rel_col]))
-
-
-# validedge2number = {}
-
-# for i in range(0,valid_test_edge_num):
-#     validedge2number[i] = 0
-
-# for i in range(len(share_entity_row)):
-#     validedge2number[share_entity_row[i]] += 1
-
-# number_list = []
-# for key in validedge2number.keys():
-#     number_list.append(validedge2number[key])
-
-# print("valid graph hyperedge connect number min: %d" % (np.min(number_list)))
-# print("valid graph hyperedge connect number max: %d" % (np.max(number_list)))
-# print("valid graph hyperedge connect number mean: %d" % (np.mean(number_list)))
-# print("valid graph hyperedge connect number median: %d" % (np.median(number_list)))
-# print("valid graph hyperedge connect number 1: %d" % (number_list.count(1)))
 
 edge_index_valid = torch.stack([
-    edge_index_row + max_train_num,  # valid 
-    edge_index_col +  c_num + e_num  # train 
+    share_entity_row + max_train_num,  # valid 
+    share_entity_col + base_node_num  # train 
 ])
 
 new_edge_index = torch.cat((edge_index_train, edge_index_valid),dim=-1)
-new_edge_type = torch.cat((edge_type_train, edge_type_valid2train),dim=-1)
+new_edge_type = torch.cat((edge_type_train, edge_type_node_valid),dim=-1)
 
 
 # 重新构建一个超图数据
@@ -365,18 +328,5 @@ train_info = {
     "edgeid2true_all": edgeid2true_all,
 }
 
-torch.save(graph_info,"../pre_handle_data/ce_data_new_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_new_train_info.pkl")
-
-# 构建一个单项图
-# 读取数据集，确定酶的数量和化合物的数量， 将两个统一编码
-# 读取训练集，将其中的每个反应的化合物和超边进行关联
-# 记录每个超边和酶之间的关系
-
-# 记录每个反应的酶的lable
-
-# 计算训练图当中超边之间的关系
-
-# 读取测试数据
-
-# 
+torch.save(graph_info,"../pre_handle_data/ce_data_single_graph_info.pkl")
+torch.save(train_info,"../pre_handle_data/ce_data_single_train_info.pkl")
