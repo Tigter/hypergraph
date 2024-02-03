@@ -192,7 +192,7 @@ base_0202_01:
   max_step: 3000
   layer: 2
   n_size: 20
-  test_step: 100
+  test_step: 50
   reg_weight: 0.00005
   conf_neg_weight: 0.5
   vio_neg_weight: 1
@@ -212,7 +212,7 @@ base_0202_02:
   max_step: 3000
   layer: 2
   n_size: 20
-  test_step: 100
+  test_step: 50
   reg_weight: 0.00005
   conf_neg_weight: 0.5
   vio_neg_weight: 1
@@ -232,7 +232,7 @@ base_0202_03:
   max_step: 3000
   layer: 2
   n_size: 20
-  test_step: 100
+  test_step: 50
   reg_weight: 0.00005
   conf_neg_weight: 0.5
   vio_neg_weight: 1
