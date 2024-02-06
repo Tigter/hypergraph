@@ -107,9 +107,28 @@ CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName base_
 
 
 
-
-
 CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce.py --train --configName base_032 --save_path     ./models/ce_data_type_emb_01 &
 CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce.py --train --configName base_0202_01 --save_path ./models/ce_data_type_emb_02 &
 CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce.py --train --configName base_0202_02 --save_path ./models/ce_data_type_emb_03 &
 CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce.py --train --configName base_0202_03 --save_path ./models/ce_data_type_emb_04 &
+
+# cat init emb
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce.py --train --configName cat_0203_02 --save_path ./models/ce_data_type_emb_05 &
+
+
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName base_032 --save_path     ./models/ce_data_v2_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_01 --save_path ./models/ce_data_v2_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_02 --save_path ./models/ce_data_v2_03 &
+# 共享参数
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_01 --save_path ./models/ce_data_v2_04 &
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_03 --save_path ./models/ce_data_v2_05 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_04 --save_path ./models/ce_data_v2_06 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_05 --save_path ./models/ce_data_v2_07 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_06 --save_path ./models/ce_data_v2_08 &
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_07 --save_path ./models/ce_data_v2_09 &
+

@@ -65,13 +65,7 @@ class EdgeEmbedding(torch.nn.Module):
             type_id = attr2e_index[1][i] -  graph_info["c_num"]
             attr_id = attr2e_index[0][i] - graph_info["c_num"] - graph_info["e_num"]
             type2attr_dict[type_id.item()].append(attr_id.item())
-            # edge_type[type_id] += attr_emb(attr_id)
-            # if type_id.item() not in times_count:
-            #     times_count[type_id.item()] = 0
-            # times_count[type_id.item()] += 1
-        
-        # for i in range(len(edge_type)-1):
-        #     edge_type[i] = edge_type[i] / times_count[i]
+       
         type2attr = [[] for i in range(num_edge_type)]
         ids = sorted(list(type2attr_dict.keys()))
         for key in ids:
@@ -105,6 +99,45 @@ class EdgeEmbedding(torch.nn.Module):
                 return sum(embedding_list) + attr_emb
             else:
                 return sum(embedding_list)
+        else:
+            raise ValueError(f"Get wrong fusion type {self.fusion_type}")
+
+class CatEdgeEmbedding(torch.nn.Module):
+    def __init__(self, embed_size, fusion_type, num_edge_type,graph_info=None):
+        super(CatEdgeEmbedding, self).__init__()
+        self.embed_size = embed_size
+        self.fusion_type = fusion_type
+
+        attr2e_index = graph_info["eid2label"]
+
+        attr_num = graph_info["base_node_num"] - graph_info["c_num"] - graph_info["e_num"]
+
+        print("attr_num: %d" % attr_num)
+        attr_emb = nn.Embedding(attr_num, self.embed_size//3)
+        init_range = 6/math.sqrt(self.embed_size)
+        nn.init.uniform_(attr_emb.weight, -init_range, init_range)
+
+        sorted(attr2e_index, key=lambda x:x[0])
+        print(attr2e_index[0])
+        embedding_list = []
+        for a in attr2e_index:
+            l1_id, l2_id, l3_id = int(a[1])-graph_info["c_num"] - graph_info["e_num"], int(a[2])-graph_info["c_num"] - graph_info["e_num"], int(a[3])-graph_info["c_num"] - graph_info["e_num"]
+            embedding_list.append(torch.cat([attr_emb.weight[l1_id],attr_emb.weight[l2_id],attr_emb.weight[l3_id]],dim=0))
+        embedding_list.append(torch.zeros(self.embed_size))
+        emb = torch.stack(embedding_list, dim =0 )
+        self.edge_type_embedding = nn.Parameter(emb)
+        self.output_embed_size = self.embed_size
+
+
+    def forward(self, data):
+       
+        embedding_list = [self.edge_type_embedding[data.long()]]
+
+        if self.fusion_type == 'concat':
+            self.output_embed_size = len(embedding_list) * self.embed_size
+            return torch.cat(embedding_list, -1)
+        elif self.fusion_type == 'add':
+            return sum(embedding_list)
         else:
             raise ValueError(f"Get wrong fusion type {self.fusion_type}")
 
@@ -155,13 +188,13 @@ class HyperCE(nn.Module):
 
         self.hyperkgeConfig = args
 
-        self.edge_type_embedding_layer = EdgeEmbedding(
+        self.edge_type_embedding_layer = CatEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
             num_edge_type=e_num+1,
             graph_info=graph_info,
         )
-        self.edge_attr_embedding_layer = BaseEdgeEmbedding(
+        self.edge_attr_embedding_layer = CatEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
             num_edge_type=e_num+1,

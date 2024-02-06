@@ -10,8 +10,8 @@ import math
 
 def load_data():
 
-    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_single_graph_info.pkl")
-    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_single_train_info.pkl")
+    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_graph_info.pkl")
+    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_train_info.pkl")
     return graph_info, train_info
 
 

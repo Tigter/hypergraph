@@ -55,7 +55,6 @@ def add_aux_data():
     l2_dict = ec_label_dict["lable2"]
     l3_dict = ec_label_dict["lable3"]
 
-
     uni_dict = {}
     uni_id = c_num + e_num
 
@@ -77,7 +76,6 @@ def add_aux_data():
     return uni_dict, uni_id,e2label,e2ko_list
 
 uni_dict, uni_id,e2label,e2ko_list = add_aux_data()
-
 
 def add_attr_id_to_e():
     att_id = []
@@ -105,12 +103,8 @@ def add_attr_id_to_e():
 
 attr2e_index = add_attr_id_to_e()
 
-
 base_node_num = uni_id
-
 edge_id = uni_id
-
-
 
 e2edgeId = defaultdict(set)
 edgeid2label = {}
@@ -249,7 +243,7 @@ def share_e(e2edgeId, c_num):
                 edge_type.append(e - c_num)
                 edge_type.append(e - c_num)
                 count +=1 
-                if count % 10000 == 0: 
+                if count % 1000000 == 0: 
                     print("count : %d" % count)
 
     node1, node2, edge_type  = torch.LongTensor(node1),torch.LongTensor(node2),torch.LongTensor(edge_type)
@@ -290,7 +284,6 @@ print(torch.max(share_entity_col))
 
 edge_type_node_valid = torch.LongTensor(np.zeros_like(share_entity_row)) + e_num
 
-
 edge_index_valid = torch.stack([
     share_entity_row + max_train_num,  # valid 
     share_entity_col + base_node_num  # train 
@@ -299,10 +292,9 @@ edge_index_valid = torch.stack([
 new_edge_index = torch.cat((edge_index_train, edge_index_valid),dim=-1)
 new_edge_type = torch.cat((edge_type_train, edge_type_node_valid),dim=-1)
 
-
 # 重新构建一个超图数据
 # 首先需要将ko 的 id 和 层次lable 进行混合编码：
-# 构造一个空白的embedding 作为 0 （这个地方存疑）
+# 构造一个空白的embedding 作为 0（这个地方存疑）
 
 graph_info = {
     "train_edge_index": edge_index_train,
@@ -328,5 +320,5 @@ train_info = {
     "edgeid2true_all": edgeid2true_all,
 }
 
-torch.save(graph_info,"../pre_handle_data/ce_data_single_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_single_train_info.pkl")
+# torch.save(graph_info,"../pre_handle_data/ce_data_single_graph_info.pkl")
+# torch.save(train_info,"../pre_handle_data/ce_data_single_train_info.pkl")

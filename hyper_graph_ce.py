@@ -260,7 +260,7 @@ if __name__=="__main__":
     logging.info('lr: %s' % lr)
 
     # 设置学习率更新策略
-    lr_scheduler = MultiStepLR(optimizer,milestones=[50000,100000,200000], gamma=decay)
+    lr_scheduler = MultiStepLR(optimizer,milestones=[500,1000,2000], gamma=decay)
     logsInstance = []
     logsTypeOf= []
     logsSubOf = []
