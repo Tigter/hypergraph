@@ -115,10 +115,6 @@ CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce.py --train --configName base_
 # cat init emb
 CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce.py --train --configName cat_0203_02 --save_path ./models/ce_data_type_emb_05 &
 
-
-
-
-
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName base_032 --save_path     ./models/ce_data_v2_01 &
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_01 --save_path ./models/ce_data_v2_02 &
 CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_02 --save_path ./models/ce_data_v2_03 &
@@ -129,6 +125,54 @@ CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName cl
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_04 --save_path ./models/ce_data_v2_06 &
 CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_05 --save_path ./models/ce_data_v2_07 &
 CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_06 --save_path ./models/ce_data_v2_08 &
-
 CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_07 --save_path ./models/ce_data_v2_09 &
 
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce.py --train --configName base_032 --save_path ./models/v1_debug &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName base_0202_01 --save_path ./models/v1_debug_01 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce.py --train --configName base_0202_02 --save_path ./models/v1_debug_02 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName base_0202_03 --save_path ./models/v1_debug_03 &
+
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce.py --train --configName stw_0206 --save_path ./models/v1_debug &
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName yinlong_0213_01 --save_path ./models/ce_data_v2_parameters_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName yinlong_0213_02 --save_path ./models/ce_data_v2_parameters_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName yinlong_0213_03 --save_path ./models/ce_data_v2_parameters_03 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName yinlong_0213_04 --save_path ./models/ce_data_v2_parameters_04 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName yinlong_0213_01 --save_path ./models/ce_data_v1_parameters_01 --init  &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName yinlong_0213_02 --save_path ./models/ce_data_v1_parameters_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce.py --train --configName yinlong_0213_03 --save_path ./models/ce_data_v1_parameters_03 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName yinlong_0213_04 --save_path ./models/ce_data_v1_parameters_04 &
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName yinlong_0213_01 --save_path ./models/ce_data_v1_old_parameters_01 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v1_old_parameters_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName yinlong_0213_02 --save_path ./models/ce_data_v1_old_parameters_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce.py --train --configName yinlong_0213_03 --save_path ./models/ce_data_v1_old_parameters_03 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName yinlong_0213_04 --save_path ./models/ce_data_v1_old_parameters_04 &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce.py --train --configName yinlong_0213_05 --save_path ./models/ce_data_v1_old_parameters_05 &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce.py --train --configName yinlong_0213_06 --save_path ./models/ce_data_v1_old_parameters_06 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce.py --train --configName yinlong_0213_07 --save_path ./models/ce_data_v1_old_parameters_07 &
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce.py --train --configName yinlong_0213_08 --save_path ./models/ce_data_v1_old_parameters_08 &
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_03 --save_path ./models/ce_data_v2_add_mlp1_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_04 --save_path ./models/ce_data_v2_add_mlp1_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_05 --save_path ./models/ce_data_v2_add_mlp1_03 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_06 --save_path ./models/ce_data_v2_add_mlp1_04 &
+
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_03 --save_path ./models/ce_data_v2_add_mlp2_01 &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_04 --save_path ./models/ce_data_v2_add_mlp2_02 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_05 --save_path ./models/ce_data_v2_add_mlp2_03 &
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v2.py --train --configName cl_0203_06 --save_path ./models/ce_data_v2_add_mlp2_04 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName yinlong_0213_01 --save_path ./models/ce_data_v1_old_parameters_01_test --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v1_old_parameters_01 &

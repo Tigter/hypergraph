@@ -307,7 +307,7 @@ class HyperCE(nn.Module):
             device=x.device
         )
         x = torch.cat([hyper_edge_emb,x], dim=0)
-        # mode="single"
+        mode="single"
         if mode == "single":
             for idx in range(len(adjs)):
                 adj_t, edge_attr,  edge_type, e_id, size = adjs[idx]

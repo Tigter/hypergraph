@@ -277,7 +277,7 @@ if __name__=="__main__":
     baselog = []
     conf_cllog = []
     vio_cllog = []
-
+    args.train = False
     if args.train :
         logging.info('beging trainning')
         for step in range(init_step, max_step):
@@ -287,7 +287,7 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 and step != 0:
+            if step % test_step == 0 :
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
@@ -311,7 +311,9 @@ if __name__=="__main__":
         logging.info('Test InstanceOf at step: %d' % max_step)
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',max_step, metrics)
-       
+
+    metrics = test_inductive(model,valid_sampler)
+    logset.log_metrics('Valid ',100, metrics)
     # if args.test :
     # 模型embedding debug 分析工具
     if args.debug :

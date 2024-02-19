@@ -188,13 +188,13 @@ class HyperCE(nn.Module):
 
         self.hyperkgeConfig = args
 
-        self.edge_type_embedding_layer = CatEdgeEmbedding(
+        self.edge_type_embedding_layer = BaseEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
             num_edge_type=e_num+1,
             graph_info=graph_info,
         )
-        self.edge_attr_embedding_layer = CatEdgeEmbedding(
+        self.edge_attr_embedding_layer = BaseEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
             num_edge_type=e_num+1,

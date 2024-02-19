@@ -24,6 +24,14 @@ class HyperGraphV3(Module):
             torch.nn.Linear(hyperkgeConfig.embedding_dim, e_num),
             torch.nn.Sigmoid()
         )
+        self.cl_mlp1 = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim, hyperkgeConfig.embedding_dim),
+            torch.nn.Sigmoid()
+        )
+        self.cl_mlp2 = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim, hyperkgeConfig.embedding_dim),
+            torch.nn.Sigmoid()
+        )
        
         self.loss_funcation = nn.CrossEntropyLoss()
 
@@ -115,7 +123,7 @@ class HyperGraphV3(Module):
         n_id, x, adjs, lable,split_idx = pos_data
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
         score  = self.ce_predictor(hyper_edge_emb)
-        return score, lable,hyper_edge_emb
+        return score, lable, hyper_edge_emb
 
     def double_train(self, data, mode="double"):
         n_id, x, adjs, split_idx = data
@@ -123,6 +131,8 @@ class HyperGraphV3(Module):
         return hyper_edge_emb
 
     def caculate_cl_loss(self, single_emb, double_emb):
+        single_emb = self.cl_mlp1(single_emb)
+        single_emb = self.cl_mlp2(single_emb)
         score = single_emb @ double_emb.transpose(0,1)
 
         batch_size = len(single_emb)
