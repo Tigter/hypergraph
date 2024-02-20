@@ -163,12 +163,12 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         adjs = adjs[0] if len(adjs) == 1 else adjs[::-1]
 
         input_x =  self.node_emb[n_id[split_idx:]]
-        # rel_pos_out = self.relation_sampler.sample(lable,self.mode)
+        rel_pos_out = self.relation_sampler.sample(lable,self.mode)
         out = (n_id,input_x, adjs, lable - self.c_num,split_idx)
-        # neg_list = self.gen_neg_rel(batch)
-        # negative_sample = np.concatenate(neg_list)
-        # rel_neg_out = self.relation_sampler.sample(negative_sample,self.mode)
-        rel_pos_out,rel_neg_out = None, None
+        neg_list = self.gen_neg_rel(batch)
+        negative_sample = np.concatenate(neg_list)
+        rel_neg_out = self.relation_sampler.sample(negative_sample,self.mode)
+        # rel_pos_out,rel_neg_out = None, None
         return out,rel_pos_out,rel_neg_out
     
     def gen_neg_rel(self, n_ids):

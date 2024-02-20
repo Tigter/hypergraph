@@ -116,55 +116,59 @@ def get_parameter_number(net):
 
 def test_inductive(model, sampler):
    
+    
     logs = []
     count = 0
-    for data in sampler:
-        count += 1
-        if count % 400 == 0:
-            print("test step count: %d" % count)
+    with torch.no_grad():
+        for data in sampler:
+            count += 1
+            if count % 400 == 0:
+                print("test step count: %d" % count)
 
-        # pos_data, rel_pos,rel_neg = data
+            pos_data, rel_pos,rel_neg = data
 
-        # n_id, x, adjs, lable,split_idx = pos_data
+            n_id, x, adjs, lable, split_idx = pos_data
 
-        # hyper_edge_emb = model.encoder(n_id,x, adjs, lable,split_idx, True)
-        # # hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
-        # batch_size = len(hyper_edge_emb)
-        # score  = model.ce_predictor(hyper_edge_emb)
-        # r_n_id, r_x, r_adjs,split_idx = rel_pos
-        # relation_emb = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # rel_emb  = relation_emb.unsqueeze(1)
-        # r_n_id, r_x, r_adjs,split_idx = rel_neg
-        # relation_emb_neg = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, model.hyperkgeConfig.embedding_dim)
-        
-        # # p_score = torch.cosine_similarity(hyper_edge_emb, rel_emb)
-        # # n_score =  torch.cosine_similarity(hyper_edge_emb, relation_emb_neg)
-        # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
-        # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
-        # score = n_score
+            # hyper_edge_emb = model.encoder(n_id,x, adjs, lable,split_idx, True)
+            # # hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
+            # batch_size = len(hyper_edge_emb)
+            # score  = model.ce_predictor(hyper_edge_emb)
+            # r_n_id, r_x, r_adjs,split_idx = rel_pos
+            # relation_emb = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
+            # rel_emb  = relation_emb.unsqueeze(1)
+            # r_n_id, r_x, r_adjs,split_idx = rel_neg
+            # relation_emb_neg = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
+            # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, model.hyperkgeConfig.embedding_dim)
+            
+            # # p_score = torch.cosine_similarity(hyper_edge_emb, rel_emb)
+            # # n_score =  torch.cosine_similarity(hyper_edge_emb, relation_emb_neg)
+            # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
+            # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
+            # score = n_score
+            score = model.score(data,mode="test")
+            score = score.squeeze(-1)
 
-        score, label = model.lable_predict(data,mode="test")
-        # score = score[:,1:]
-        # score = score.squeeze(-1)
-        argsort = torch.argsort(score, dim = 1, descending=True)
+            # lable predict
+            # score, lable = model.lable_predict(data,mode="test")    
 
-        for i in range(score.shape[0]):
-            ranking = (argsort[i, :] == label[i]).nonzero()
-            assert ranking.size(0) == 1
-            ranking = 1 + ranking.item()
-            logs.append({
-                'MRR': 1.0/ranking,
-                'MR': float(ranking),
-                'HITS@1': 1.0 if ranking <= 1 else 0.0,
-                'HITS@3': 1.0 if ranking <= 3 else 0.0,
-                'HITS@10': 1.0 if ranking <= 10 else 0.0,
-            })
+            argsort = torch.argsort(score, dim = 1, descending=True)
 
-    metrics = {}
-    for metric in logs[0].keys():
-        metrics[metric] = sum([log[metric] for log in logs])/len(logs)
-    return metrics
+            for i in range(score.shape[0]):
+                ranking = (argsort[i, :] == lable[i]).nonzero()
+                assert ranking.size(0) == 1
+                ranking = 1 + ranking.item()
+                logs.append({
+                    'MRR': 1.0/ranking,
+                    'MR': float(ranking),
+                    'HITS@1': 1.0 if ranking <= 1 else 0.0,
+                    'HITS@3': 1.0 if ranking <= 3 else 0.0,
+                    'HITS@10': 1.0 if ranking <= 10 else 0.0,
+                })
+
+        metrics = {}
+        for metric in logs[0].keys():
+            metrics[metric] = sum([log[metric] for log in logs])/len(logs)
+        return metrics
 
 def setup_seed(seed):
      torch.manual_seed(seed)
@@ -277,7 +281,7 @@ if __name__=="__main__":
     baselog = []
     conf_cllog = []
     vio_cllog = []
-    args.train = False
+    args.train = True
     if args.train :
         logging.info('beging trainning')
         for step in range(init_step, max_step):
@@ -287,7 +291,7 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 :
+            if step % test_step == 0 and step != 0:
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
