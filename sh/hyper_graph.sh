@@ -176,3 +176,10 @@ CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v2.py --train --configName cl
 
 
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName yinlong_0213_01 --save_path ./models/ce_data_v1_old_parameters_01_test --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v1_old_parameters_01 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_ce.py --train --configName yinlong_0220_01 --save_path ./models/ce_data_v1_old_parameters_11 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce.py --train --configName yinlong_0220_02 --save_path ./models/ce_data_v1_old_parameters_12 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce.py --train --configName yinlong_0220_03 --save_path ./models/ce_data_v1_old_parameters_13 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce.py --train --configName yinlong_0220_04 --save_path ./models/ce_data_v1_old_parameters_14 &
+

@@ -10,18 +10,18 @@ import json
 # 处理酶和化合物的数据
 print("begin")
 
-with open("./bkms_v2.pkl",'rb') as f:
-    data = pickle.load(f)
-    f.close()
+# with open("./bkms_v2.pkl",'rb') as f:
+#     data = pickle.load(f)
+#     f.close()
 
-print("load finised")
+# print("load finised")
 
-print(data.keys())
-print(data.keys())
+# print(data.keys())
+# print(data.keys())
 
-data["train"] = data["sing_train"]
-data["valid"] = data["sing_valid"]
-data["test"] = data["sing_test"]
+# data["train"] = data["sing_train"]
+# data["valid"] = data["sing_valid"]
+# data["test"] = data["sing_test"]
 
 
 with open("./bkms_new.pkl",'rb') as f:
@@ -339,5 +339,5 @@ train_info = {
     "edgeid2true_all": edgeid2true_all,
 }
 
-torch.save(graph_info,"../pre_handle_data/ce_data_single_from_train_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_single_from_train_train_info.pkl")
+torch.save(graph_info,"../pre_handle_data/ce_data_single_graph_info.pkl")
+torch.save(train_info,"../pre_handle_data/ce_data_single_train_info.pkl")
