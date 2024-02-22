@@ -29,18 +29,18 @@ def build_graph_sampler(config):
         train_info["train_id_list"],
             batch_size=config["batch_size"],
             size=config["neibor_size"],
-            n_size=config["n_size"])
+            n_size=config["n_size"],config=config)
     
     valid_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["valid_id_list"],
             batch_size=16,
-            size=config["neibor_size"],
+            size=config["test_neibor_size"],
              mode="valid"
             )
     test_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["test_id_list"],
             batch_size=16,
-            size=config["neibor_size"],
+            size=config["test_neibor_size"],
              mode="valid"
             )
     return sampler,valid_sampler, test_sampler,graph_info,train_info,node_emb
@@ -69,7 +69,7 @@ def build_graph_sampler(config):
 
 class CEGraphSampler(torch.utils.data.DataLoader):
    
-    def __init__(self, graph_info,train_info,node_idx,batch_size=128,size=[2,2],n_size=10,mode="train",**kwargs):
+    def __init__(self, graph_info,train_info,node_idx,batch_size=128,size=[2,2],n_size=10,mode="train",config=None,**kwargs):
         
         self.batch_size = batch_size
         self.graph_info = graph_info
@@ -135,7 +135,7 @@ class CEGraphSampler(torch.utils.data.DataLoader):
 
         if self.mode == "train":
             self.doubleSampler = DoubleGraphSampler(
-                graph_info,train_info,size=size
+                graph_info,train_info,size=config["full_neibor_size"]
             )
         single2double = self.graph_info["single2double"]
 
@@ -146,7 +146,6 @@ class CEGraphSampler(torch.utils.data.DataLoader):
     def sample(self, batch):
         sample_idx = [i - self.n_node for i in batch]  # 输入是超边的id，然后转为从0开始的index，这样才能获取到正确的label
         
-
         lable = self.label[sample_idx] 
         sample_idx = torch.LongTensor(sample_idx)
         n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确

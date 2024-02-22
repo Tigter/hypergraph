@@ -119,11 +119,17 @@ class HyperGraphV3(Module):
         
         return score, lable
 
+    def reg_l2(self, x):
+        return torch.mean(torch.norm(x,dim=-1))
+
     def lable_train(self, pos_data, mode="train"):
         n_id, x, adjs, lable,split_idx = pos_data
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
         score  = self.ce_predictor(hyper_edge_emb)
-        return score, lable, hyper_edge_emb
+        if mode == 'train':
+            return score, lable, hyper_edge_emb, self.reg_l2(x)
+        else:
+            return score, lable, hyper_edge_emb
 
     def double_train(self, data, mode="double"):
         n_id, x, adjs, split_idx = data
@@ -131,8 +137,8 @@ class HyperGraphV3(Module):
         return hyper_edge_emb
 
     def caculate_cl_loss(self, single_emb, double_emb):
-        single_emb = self.cl_mlp1(single_emb)
-        single_emb = self.cl_mlp2(single_emb)
+        # single_emb = self.cl_mlp1(single_emb)
+        # single_emb = self.cl_mlp2(single_emb)
         score = single_emb @ double_emb.transpose(0,1)
 
         batch_size = len(single_emb)
@@ -147,7 +153,7 @@ class HyperGraphV3(Module):
         model.train()
 
         single_data, double_data = data
-        score, label, single_emb = model.lable_train(single_data)
+        score, label, single_emb, reg_weight = model.lable_train(single_data)
         double_emb =  model.double_train(double_data)
 
         label = label.cuda()    
@@ -155,12 +161,15 @@ class HyperGraphV3(Module):
 
         cl_loss = model.caculate_cl_loss(single_emb, double_emb)
 
-        loss = loss + config["cl_weight"] * cl_loss
+        cl_loss_weighted = config["cl_weight"] * cl_loss 
+        reg_loss_weighted = reg_weight * config["reg_weight"]
+        loss = loss + reg_loss_weighted +  cl_loss_weighted
         loss.backward()
         optimizer.step()
         logs = {    
             "loss": loss.item(),
-            "cl_loss": cl_loss.item() * config["cl_weight"]
+            "cl_loss": cl_loss_weighted.item(),
+            "reg_loss": reg_loss_weighted.item(),
         }
         return logs
 

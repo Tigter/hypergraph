@@ -225,6 +225,7 @@ if __name__=="__main__":
     hyperConfig = HyperKGEConfig()
     hyperConfig.embedding_dim = modelConfig['dim']
     hyperConfig.gamma = modelConfig['gamma']
+    hyperConfig.conv_args_conv_dropout_rate = modelConfig['dropout']
     n_node = graph_info['base_node_num']
 
     model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info)
@@ -277,7 +278,7 @@ if __name__=="__main__":
     baselog = []
     conf_cllog = []
     vio_cllog = []
-    args.train = False
+    # args.train = False
     if args.train :
         logging.info('beging trainning')
         for step in range(init_step, max_step):
@@ -293,6 +294,8 @@ if __name__=="__main__":
                 logging.info('Valid InstanceOf at step: %d' % step)
                 metrics = test_inductive(model,valid_sampler)
                 logset.log_metrics('Valid ',step, metrics)
+                for key in metrics:
+                    writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in sampler:
                 log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig)
@@ -311,9 +314,9 @@ if __name__=="__main__":
         logging.info('Test InstanceOf at step: %d' % max_step)
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',max_step, metrics)
-
-    metrics = test_inductive(model,valid_sampler)
-    logset.log_metrics('Valid ',100, metrics)
+    else:
+        metrics = test_inductive(model,test_sampler)
+        logset.log_metrics('Test ',100, metrics)
     # if args.test :
     # 模型embedding debug 分析工具
     if args.debug :

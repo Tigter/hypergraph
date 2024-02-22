@@ -32,7 +32,7 @@ class HyperKGEConfig:
     conv_args_num_attention_heads = 4
     conv_args_residual_beta = 1
     conv_args_learn_beta = 0.001
-    conv_args_conv_dropout_rate = 0.1
+    conv_args_conv_dropout_rate = 0.5
     conv_args_trans_method = "add"
     conv_args_negative_slope = 0.2
     conv_args_head_fusion_mode = "add"

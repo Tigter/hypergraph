@@ -35,13 +35,13 @@ def build_graph_sampler(config):
     valid_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["valid_id_list"],
             batch_size=16,
-            size=config["neibor_size"],
+            size=[50,15],
              mode="valid"
             )
     test_sampler = CEGraphSampler(graph_info, train_info, 
         train_info["test_id_list"],
             batch_size=16,
-            size=config["neibor_size"],
+            size=[50,15],
              mode="valid"
             )
     return sampler,valid_sampler, test_sampler,graph_info,train_info,node_emb

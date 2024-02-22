@@ -178,7 +178,7 @@ if __name__=="__main__":
     # 读取4个数据集
     setup_seed(20)
     args = set_config()
-    with open('./config/hyper_graph_ce.yml','r', encoding='utf-8') as f:
+    with open('./config/hypergraph_ce_v2.yml','r', encoding='utf-8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         baseConfig = config['baseConfig']
         modelConfig = config[args.configName]
@@ -224,6 +224,8 @@ if __name__=="__main__":
     base_loss_funcation = nn.CosineEmbeddingLoss(margin=modelConfig['margin'])
     hyperConfig = HyperKGEConfig()
     hyperConfig.embedding_dim = modelConfig['dim']
+    hyperConfig.conv_args_conv_dropout_rate = modelConfig['dropout']
+
     hyperConfig.gamma = modelConfig['gamma']
     n_node = graph_info['base_node_num']
 
@@ -232,7 +234,7 @@ if __name__=="__main__":
     if cuda:
         model = model.cuda()
        
-    optimizer = torch.optim.Adam([
+    optimizer = torch.optim.SGD([
         {
             'params':filter(lambda p: p.requires_grad, model.parameters())
         },
@@ -292,6 +294,8 @@ if __name__=="__main__":
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
                 metrics = test_inductive(model,valid_sampler)
+                for key in metrics:
+                    writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ',step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in sampler:
