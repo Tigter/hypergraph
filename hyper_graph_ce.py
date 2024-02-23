@@ -311,9 +311,14 @@ if __name__=="__main__":
         }
         ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
+        init_path = os.path.join(root_path,"hit10")
+        checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
+        model.load_state_dict(checkpoint['model_state_dict'],strict=True)
+
         logging.info('Test InstanceOf at step: %d' % max_step)
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',max_step, metrics)
+        
     else:
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',100, metrics)
