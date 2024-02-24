@@ -27,10 +27,11 @@ from torch.optim.lr_scheduler import StepLR
 from torchstat import stat
 import argparse
 import torch.nn.functional as F
+import pickle
 
 from util.ce_data_v2 import *
 import random
-from core.HyperGraphV22 import HyperGraphV3
+from core.HyperGraphV21 import HyperGraphV3
 
 #!!!!!!!!!!!!!!!!!!!!!!!!#
 # 设置是否使用原始的超图
@@ -144,7 +145,7 @@ def test_inductive(model, sampler):
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
 
-        score, label = model.lable_predict_base(data,mode="test")
+        score, label = model.lable_predict(data,mode="test")
         # score = score[:,1:]
         # score = score.squeeze(-1)
         argsort = torch.argsort(score, dim = 1, descending=True)
@@ -172,6 +173,73 @@ def setup_seed(seed):
      np.random.seed(seed)
      random.seed(seed)
      torch.backends.cudnn.deterministic = True
+
+def score(model, input_c, neg_e):
+    c_emb = model.node_emb(input_c)
+    e_emb  = model.encoder.edge_type_embedding_layer(neg_e)
+
+    score = torch.norm(c_emb * e_emb,dim=-1)
+    return score
+
+
+def evaluate(model, reaction, e_number, c2eList):
+
+    # reaction[0]: c data  reaction[1]: e data
+    # c2eList: c data to all e
+    # 数据量不是很大，直接开始做吧
+    logs = []
+    for c_list, e in reaction:
+        rank_list = []
+        for c in c_list:
+            neg_e = torch.LongTensor(range(0, e_number))
+            input_c =torch.LongTensor([c for i in range(e_number)])
+            neg_e = neg_e.cuda()
+            input_c = input_c.cuda()
+
+            # 模型预测的 score
+            pred_interaction_ =  score(model,input_c, neg_e) # model(input_c, neg_e) # 1*e_number 的 score
+            
+            pred_interaction_ = pred_interaction_.squeeze()
+
+            pred_interaction_[c2eList[c]] = pred_interaction_[c2eList[c]] - 1 # 预测的score
+            pred_interaction_[e] = pred_interaction_[e] + 1
+
+            argsort = torch.argsort(pred_interaction_, descending=True)
+            ranking = (argsort[:] == e).nonzero()
+            rank_list.append(ranking.item()+1)
+        rank = np.max(rank_list)
+        logs.append({
+            'MRR': 1.0/rank,
+            'MR': float(rank),
+            'HITS@1': 1.0 if rank <= 1 else 0.0,
+            'HITS@3': 1.0 if rank <= 50 else 0.0,
+            'HITS@10': 1.0 if rank <= 100 else 0.0,
+        })
+    metrics = {}
+    for metric in logs[0].keys():
+        metrics[metric] = sum([log[metric] for log in logs])/len(logs)
+    return metrics
+
+
+def load_interaction_data():
+    with open('/home/skl/yl/Boost-RS/data/kegg/base_data/boost-format/boostrc_format_kegg_data_new.pkl', 'rb') as fi:
+        data = pickle.load(fi)
+        fi.close()
+
+    c_dict = data["c_dict"]
+    e_dict = data["e_dict"]
+
+    c_num = len(c_dict)
+    e_num = len(e_dict)
+    
+    tr_p, va_p, te_p = data['train'], data['valid'], data['test']
+    train_neg = data["train_neg"]
+
+    ec_label = data["ec_label"]
+    ko_label = data["ko_label"]
+    cc_data =  data["cc_data"]
+    
+    return  tr_p, va_p, te_p,train_neg ,ec_label ,ko_label ,cc_data,c_num,e_num
 
 
 if __name__=="__main__":
@@ -246,6 +314,7 @@ if __name__=="__main__":
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))
     # 如果-有保-存模-型则，读取-模型,进行-测试
+    init_path = "/home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_0222_03/hit10"
     if init_path != None:
         logging.info('init: %s' % init_path)
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
@@ -261,73 +330,22 @@ if __name__=="__main__":
     logging.info('init step: %s' % init_step)
     logging.info('lr: %s' % lr)
 
-    # 设置学习率更新策略
-    lr_scheduler = MultiStepLR(optimizer,milestones=[500,1000,2000], gamma=decay)
-    logsInstance = []
-    logsTypeOf= []
-    logsSubOf = []
-    logAll = []
-   
-    stepW = 0
-    bestModel = {
-        "MRR":0,
-        "MR":1000000000,
-        "HITS@1":0,
-        "HITS@3":0,
-        "HITS@10":0
-    }
-    baselog = []
-    conf_cllog = []
-    vio_cllog = []
+    tr_p, va_p, te_p,train_neg ,ec_label ,ko_label,cc_data ,c_num,e_num= load_interaction_data()
+    c2eList = defaultdict(list)
+    for data in tr_p:
+        c,e = data[0],data[1]
+        c2eList[c].append(e)
+    for data in va_p:
+        cs,e = data[0],data[1]
+        for c in cs:
+            c2eList[c].append(e)  
+    for data in te_p:
+        cs,e = data[0],data[1]
+        for c in cs:
+            c2eList[c].append(e)     
 
-    if args.train :
-        logging.info('beging trainning')
-        for step in range(init_step, max_step):
-            begin_time = time.time()
-            if step % 10 == 0 :
-                save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
-                }
-                ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
+    metris = evaluate(model, va_p, e_num,c2eList)
 
-            if step % test_step == 0 :
-                save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
-                }
-                logging.info('Valid InstanceOf at step: %d' % step)
-                metrics = test_inductive(model,valid_sampler)
-                for key in metrics:
-                    writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
-                logset.log_metrics('Valid ',step, metrics)
-                ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
-            for data in sampler:
-                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig)
-                baselog.append(log)
-            if step % 5 == 0:
-                logging_log(step, baselog, writer)
-                baselog=[]
-                time_used = time.time() - begin_time
-                begin_time = time.time()
-                logging.info("epoch %d used time: %.3f" % (step, time_used))
-            lr_scheduler.step()
-        save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":max_step,'ConfigName':args.configName
-        }
-        ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
-
-        init_path = os.path.join(root_path,"hit10")
-        checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
-        model.load_state_dict(checkpoint['model_state_dict'],strict=True)
-
-        logging.info('Test InstanceOf at step: %d' % max_step)
-        metrics = test_inductive(model,test_sampler)
-        logset.log_metrics('Test ',max_step, metrics)
-       
-    # if args.test :
-    # 模型embedding debug 分析工具
-    if args.debug :
-        entity_embdding = model.embedding.weight[0:14541]
-        relation_embedding = model.embedding.weight[14541:]
-        with open('./entity_embdding.txt','w') as f:
-            e_mean = torch.mean(entity_embdding,dim=-1)
-            f.write(str(list(e_mean.cpu().detach().numpy().tolist())))
-        with open('./relation_embdding.txt','w') as f:
-            e_mean = torch.mean(relation_embedding,dim=-1)
-            f.write(str(e_mean.cpu().detach().numpy().tolist()))
+    print("Test Result:")
+    print("MRR: %.3f,   MR: %d, Hit1: %.3f,Hit3: %.3f, Hit10: %.3f" 
+                  % (metris["MRR"],metris["MR"],metris["HITS@1"],metris["HITS@3"],metris["HITS@10"]))

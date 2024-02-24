@@ -220,3 +220,10 @@ CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v2.py --train --configName cl
 CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_02 --save_path ./models/ce_data_v2_0222_sgd_06 &
 CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_03 --save_path ./models/ce_data_v2_0222_sgd_07 &
 CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_04 --save_path ./models/ce_data_v2_0222_sgd_08 &
+
+# 
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_01 --save_path ./models/ce_data_v2_base_predict_0224_01 &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_02 --save_path ./models/ce_data_v2_base_predict_0224_02 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_03 --save_path ./models/ce_data_v2_base_predict_0224_03 &
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_04 --save_path ./models/ce_data_v2_base_predict_0224_04 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v2.py --train --configName cl_0221_05 --save_path ./models/ce_data_v2_base_predict_0224_05 &

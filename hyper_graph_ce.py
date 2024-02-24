@@ -144,7 +144,7 @@ def test_inductive(model, sampler):
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
 
-        score, label = model.lable_predict(data,mode="test")
+        score, label = model.lable_predict_base(data,mode="test")
         # score = score[:,1:]
         # score = score.squeeze(-1)
         argsort = torch.argsort(score, dim = 1, descending=True)
@@ -318,7 +318,7 @@ if __name__=="__main__":
         logging.info('Test InstanceOf at step: %d' % max_step)
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',max_step, metrics)
-        
+
     else:
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',100, metrics)

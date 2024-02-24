@@ -11,6 +11,7 @@ import torch.sparse
 from core.HyperCEV2 import HyperCE
 from loss import *
 
+from core.BaseLayer import MulScoreGnn
 from core.HypergraphTransformer import HypergraphTransformer
 
 class HyperGraphV3(Module):
@@ -34,6 +35,8 @@ class HyperGraphV3(Module):
         )
         
         self.loss_funcation = nn.CrossEntropyLoss()
+
+        self.baseGnn = MulScoreGnn()
 
 
     def init_parameters(self):
@@ -119,13 +122,56 @@ class HyperGraphV3(Module):
         
         return score, lable
 
+    def lable_predict_base(self, data, mode="train"):
+        pos_data,baseData = data
+
+        n_id, x, adjs, lable,split_idx = baseData
+
+        hyper_edge_emb = torch.zeros(
+            split_idx,
+            self.hyperkgeConfig.embedding_dim,
+            device=x.device
+        )
+        x = torch.cat([hyper_edge_emb,x], dim=0)
+        adj_t, edge_attr,  edge_type, e_id, size = adjs[0]
+        x_target = x[:adj_t.size(0)]
+        adj_t = adj_t.cuda()
+
+        score = self.baseGnn(
+            x= (x, x_target),
+            e_emb= self.encoder.edge_type_embedding_layer.edge_type_embedding,
+            edge_index = adj_t
+        )
+        return score,lable
+
     def reg_l2(self, x):
         return torch.mean(torch.norm(x,dim=-1))
 
-    def lable_train(self, pos_data, mode="train"):
+
+    def train_base_score(self, base_out):
+        n_id, x, adjs, lable, split_idx = base_out
+        hyper_edge_emb = torch.zeros(
+            split_idx,
+            self.hyperkgeConfig.embedding_dim,
+            device=x.device
+        )
+        x = torch.cat([hyper_edge_emb,x], dim=0)
+        adj_t, edge_attr,  edge_type, e_id, size = adjs[0]
+        x_target = x[:adj_t.size(0)]
+        adj_t = adj_t.cuda()
+
+        score = self.baseGnn(
+            x= (x, x_target),
+            e_emb= self.encoder.edge_type_embedding_layer.edge_type_embedding,
+            edge_index = adj_t
+        )
+        return score
+
+    def lable_train(self, pos_data,base_out, mode="train"):
         n_id, x, adjs, lable,split_idx = pos_data
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
-        score  = self.ce_predictor(hyper_edge_emb)
+        # score  = self.ce_predictor(hyper_edge_emb)
+        score = self.train_base_score(base_out)
         if mode == 'train':
             return score, lable, hyper_edge_emb, self.reg_l2(x)
         else:
@@ -152,8 +198,8 @@ class HyperGraphV3(Module):
         optimizer.zero_grad()
         model.train()
 
-        single_data, double_data = data
-        score, label, single_emb, reg_weight = model.lable_train(single_data)
+        single_data, double_data,base_out = data
+        score, label, single_emb, reg_weight = model.lable_train(single_data,base_out)
         double_emb =  model.double_train(double_data)
 
         label = label.cuda()    

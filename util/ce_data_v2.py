@@ -150,7 +150,27 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         sample_idx = torch.LongTensor(sample_idx)
         n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
         
+        # 采样超边 -> 化合物的过程
+        base_adj = []
+        for i, size in enumerate(self.sizes):
 
+            if i == len(self.sizes) - 1:
+                # Sample ci2traj one-hop checkin relation
+                split_idx = len(n_id)
+                adj_t, base_nid = self.ci2traj_adj_t.sample_adj(n_id, size, replace=False)
+                row, col, e_id = adj_t.coo()
+                edge_attr = None
+                edge_type = None
+            else:
+                continue
+            
+            size = adj_t.sparse_sizes()[::-1]
+            base_adj.append((adj_t, edge_attr,  edge_type, e_id, size))
+
+        base_input_x =  self.node_emb[base_nid[split_idx:]]
+        base_out = (base_nid, base_input_x, base_adj, lable - self.c_num,split_idx)
+
+        
         adjs = [] 
         for i, size in enumerate(self.sizes):
             if i == len(self.sizes) - 1:
@@ -181,9 +201,9 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         if self.mode == "train":
             double_id = self.single2double[sample_idx]
             double_out = self.doubleSampler.sample(double_id)
-            return out,double_out
+            return out,double_out,base_out
         else:
-            return out
+            return out,base_out
     def __repr__(self):
         return '{}(sizes={})'.format(self.__class__.__name__, self.sizes)
 
