@@ -162,10 +162,13 @@ def build_single_graph(data, c2id, e2id, base_node_num):
     r_edge = []
     train_id_list = []
 
+    c2singleId = defaultdict(list) 
+
     for c_list, e in data["sing_train"]:
         for c in c_list:
             c_node.append(c2id[c])
             r_edge.append(edge_id)
+            c2singleId[c2id[c]].append(edge_id)
 
         re_node.append(e2id[e])
         rr_edge.append(edge_id)
@@ -310,6 +313,7 @@ def build_single_graph(data, c2id, e2id, base_node_num):
         "edgeid2label": edgeid2label,
         "edgeid2true_train": edgeid2true_train,
         "edgeid2true_all": edgeid2true_all,
+        "c2singleId":c2singleId
     }
     return sing_graph, train_info
 
@@ -404,10 +408,15 @@ graph_info = {
     "e_num": e_num,
     "base_node_num":uni_id,
     "eid2label":eid2label,
-    "attr2e_index":attr2e_index
+    "attr2e_index":attr2e_index,
+    "single_train":data["sing_train"],
+    "single_valid":data["sing_valid"],
+    "single_test":data["sing_test"],
+    "c2id": c2id,
+    "e2id": e2id,
 }
 graph_info.update(sing_graph)
 graph_info.update(double_graph)
 
-torch.save(graph_info,"../pre_handle_data/ce_data_double_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_double_train_info.pkl")
+torch.save(graph_info,"../pre_handle_data/ce_data_double_base_graph_info.pkl")
+torch.save(train_info,"../pre_handle_data/ce_data_double_base_train_info.pkl")

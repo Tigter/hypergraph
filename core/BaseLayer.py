@@ -65,6 +65,6 @@ class MulScoreGnn(MessagePassing):
         for i in range(final_node_num+1):
             emb = inputs[index==i]
             assert len(emb) != 0
-            result_tensor[i] = torch.sum(torch.softmax(emb,dim=0) * emb,dim=0)  # number * e_num
+            result_tensor[i] = torch.sum(torch.softmax(-emb,dim=0) * emb,dim=0)  # number * e_num
         
         return result_tensor
