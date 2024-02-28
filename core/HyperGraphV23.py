@@ -72,15 +72,17 @@ class HyperGraphV3(Module):
             torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
             torch.nn.Sigmoid()
         )
+        hidden_dim = hyperkgeConfig.embedding_dim
+
 
         self.loss_funcation = nn.BCELoss()
 
         self.baseGnn = MulScoreGnn()
-
+        self.ec_predictor = []
         for ec_dim in [13, 86, 312]:
-            self.ec_predictor.append(MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=dropout, sigmoid_last_layer=False))
+            self.ec_predictor.append(MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=0.5, sigmoid_last_layer=False))
 
-        self.ko_predictor = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=6903, dropout=dropout, sigmoid_last_layer=True)
+        self.ko_predictor = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=6903, dropout=0.5, sigmoid_last_layer=True)
 
     def init_parameters(self):
         stdv = 1.0 / math.sqrt(self.emb_size)
