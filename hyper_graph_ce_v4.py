@@ -28,9 +28,9 @@ from torchstat import stat
 import argparse
 import torch.nn.functional as F
 
-from util.ce_data_v3 import *
+from util.ce_data_v4 import *
 import random
-from core.HyperGraphV23 import HyperGraphV3
+from core.HyperGraphV24 import HyperGraphV3
 
 import pickle
 #!!!!!!!!!!!!!!!!!!!!!!!!#
@@ -199,13 +199,17 @@ def setup_seed(seed):
      torch.backends.cudnn.deterministic = True
 
 
-def evaluate(model, reaction, e_number, c2eList, graph_info):
+def evaluate(model, reaction, e_number, c2eList, graph_info,train_info, config):
     # reaction[0]: c data  reaction[1]: e data
     # c2eList: c data to all e
     # 数据量不是很大，直接开始做吧
     c2id = graph_info['c2id']
     e2id = graph_info['e2id']
-
+    toNodeSampler = ToNodeSampler(graph_info, train_info, 
+        train_info["test_id_list"],
+            batch_size=16,
+            size=config["node_sampler_size"],
+            mode="valid",config=config)
     logs = []
     for c_list, e in reaction:
         e = e2id[e] - graph_info['c_num']
@@ -214,12 +218,17 @@ def evaluate(model, reaction, e_number, c2eList, graph_info):
         for c in c_list:
 
             neg_e = torch.LongTensor(range(0, e_number))
-            input_c =torch.LongTensor([c2id[c] for i in range(e_number)])
+            # input_c =torch.LongTensor([c2id[c] for i in range(e_number)])
+
+            input_c =torch.LongTensor([c2id[c]])
+            toNodeData = toNodeSampler.sample(input_c)
+
+            
             neg_e = neg_e.cuda()
             input_c = input_c.cuda()
 
             # 模型预测的 score
-            pred_interaction_ = model.base_score(input_c, neg_e) # 1*e_number 的 score
+            pred_interaction_ , _ = model.base_score(input_c, neg_e, toNodeData) # 1*e_number 的 score
             pred_interaction_ = pred_interaction_.squeeze()
             if e not in c2eList[c2id[c]]:
                 print("error")
@@ -296,22 +305,7 @@ if __name__=="__main__":
 
     hyperConfig.gamma = modelConfig['gamma']
     n_node = graph_info['base_node_num']
-
-    tr_p, va_p, te_p,train_neg ,ec_label ,ko_label,cc_data ,c_num,e_num= load_interaction_data()
-    ec_label = torch.LongTensor(ec_label)
-    rpairs_pos = torch.LongTensor(cc_data)
-    enzyme_ko = torch.LongTensor(ko_label)
-
-    ec_label = ec_label.cuda()
-    rpairs_pos = rpairs_pos.cuda()
-    enzyme_ko = enzyme_ko.cuda()
-
-    help_data = {
-        "ec_label": ec_label,
-        "rpairs_pos": rpairs_pos,
-        "enzyme_ko": enzyme_ko
-    }
-
+    help_data = None
 
     model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info)
     model.node_emb = node_emb
@@ -379,7 +373,7 @@ if __name__=="__main__":
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
                 # metrics = test_inductive(model,valid_sampler)
-                metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
+                metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ',step, metrics)
@@ -403,6 +397,6 @@ if __name__=="__main__":
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
-        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
        

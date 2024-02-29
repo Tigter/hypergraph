@@ -316,9 +316,9 @@ if __name__=="__main__":
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
-        logging.info('Test InstanceOf at step: %d' % max_step)
+        logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
         metrics = test_inductive(model,test_sampler)
-        logset.log_metrics('Test ',max_step, metrics)
+        logset.log_metrics('Test ',checkpoint['step'], metrics)
        
     # if args.test :
     # 模型embedding debug 分析工具
