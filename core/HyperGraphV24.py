@@ -277,7 +277,7 @@ class HyperGraphV3(Module):
         if mode == "train":
             mf_embedding_compound = mf_embedding_compound.repeat(1,mf_embedding_enzyme.shape[1],1)
         else:
-            mf_embedding_compound = mf_embedding_compound.repeat(1,mf_embedding_enzyme.shape[1])
+            mf_embedding_compound = mf_embedding_compound.repeat(mf_embedding_enzyme.shape[0],1)
         # mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
         # mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
 

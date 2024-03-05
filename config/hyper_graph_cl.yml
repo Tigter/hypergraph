@@ -29,6 +29,28 @@ cl_0221_best:
   node_sampler_size: [10,30,10]
   data_reverse: False
 
+cl_0221_baseline: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 500
+  lr: 0.0005
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 20
+  test_step: 50
+  reg_weight: 0.1
+  cl_weight: 0.00001
+  margin: 0.2
+  dropout: 0.8
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,10]
+  node_sampler_size: [10,30,10]
+  data_reverse: False
+
 cl_03_01: 
   batch_size: 4096
   name: ComplEx
@@ -86,6 +108,72 @@ cl_03_03:
   test_step: 50
   reg_weight: 0.1
   cl_weight: 0.00001
+  margin: 0.2
+  dropout: 0.8
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,10]
+  node_sampler_size: [10,30,10]
+  data_reverse: False
+
+cl_03_04: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 500
+  lr: 0.0001
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 20
+  test_step: 50
+  reg_weight: 0.1
+  cl_weight: 0.01
+  margin: 0.2
+  dropout: 0.8
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,10]
+  node_sampler_size: [10,30,10]
+  data_reverse: False
+
+cl_03_05: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 500
+  lr: 0.0001
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 20
+  test_step: 50
+  reg_weight: 0.1
+  cl_weight: 1
+  margin: 0.2
+  dropout: 0.8
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,10]
+  node_sampler_size: [10,30,10]
+  data_reverse: False
+
+cl_03_06: 
+  batch_size: 4096
+  name: ComplEx
+  gamma: 1
+  dim: 500
+  lr: 0.0001
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 20
+  test_step: 50
+  reg_weight: 0.1
+  cl_weight: 10
   margin: 0.2
   dropout: 0.8
   cl_temp: 1.0

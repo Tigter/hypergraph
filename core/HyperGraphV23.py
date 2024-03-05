@@ -178,28 +178,36 @@ class HyperGraphV3(Module):
         
         return score, lable
 
+    # def lable_predict_base(self, data, mode="train"):
+    #     pos_data,baseData = data
+
+    #     n_id, x, adjs, lable,split_idx = baseData
+
+    #     hyper_edge_emb = torch.zeros(
+    #         split_idx,
+    #         self.hyperkgeConfig.embedding_dim,
+    #         device=x.device
+    #     )
+    #     x = torch.cat([hyper_edge_emb,x], dim=0)
+    #     adj_t, edge_attr,  edge_type, e_id, size = adjs[0]
+    #     x_target = x[:adj_t.size(0)]
+    #     adj_t = adj_t.cuda()
+
+    #     score = self.baseGnn(
+    #         x= (x, x_target),
+    #         e_emb= self.encoder.edge_type_embedding_layer.edge_type_embedding,
+    #         edge_index = adj_t
+    #     )
+    #     return score,lable
     def lable_predict_base(self, data, mode="train"):
         pos_data,baseData = data
-
-        n_id, x, adjs, lable,split_idx = baseData
-
-        hyper_edge_emb = torch.zeros(
-            split_idx,
-            self.hyperkgeConfig.embedding_dim,
-            device=x.device
-        )
-        x = torch.cat([hyper_edge_emb,x], dim=0)
-        adj_t, edge_attr,  edge_type, e_id, size = adjs[0]
-        x_target = x[:adj_t.size(0)]
-        adj_t = adj_t.cuda()
-
-        score = self.baseGnn(
-            x= (x, x_target),
-            e_emb= self.encoder.edge_type_embedding_layer.edge_type_embedding,
-            edge_index = adj_t
-        )
-        return score,lable
-
+        n_id, x, adjs, ne_list ,lable,split_idx = pos_data
+        n_id = n_id.cuda()
+        x =  self.node_emb(n_id[split_idx:])
+        hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
+        predict = self.ne_score(ne_list, hyper_edge_emb)
+        predict = predict.squeeze(-1)
+        return predict,lable
     def reg_l2(self, x):
         return torch.mean(torch.norm(x,dim=-1))
 
@@ -222,18 +230,33 @@ class HyperGraphV3(Module):
             edge_index = adj_t
         )
         return score
+    
+    def ne_score(self, ne_list, embedding):
+        ne_list = ne_list.cuda()
+        hyper_edge_emb = embedding.unsqueeze(1)
+        e_emb = self.node_emb(ne_list+self.c_num)
+
+        score = hyper_edge_emb * e_emb  
+        predict = self.dropout(score)
+        predict = self.ce_predictor(score)
+        return predict
+
+
 
     def lable_train(self, pos_data,base_out, mode="train"):
-        n_id, x, adjs, lable,split_idx = pos_data
+        n_id, x, adjs, ne_list,lable,split_idx = pos_data
         n_id = n_id.cuda()
         x =  self.node_emb(n_id[split_idx:])
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
         # score  = self.ce_predictor(hyper_edge_emb)
-        score = self.train_base_score(base_out)
+
+        predict = self.ne_score(ne_list, hyper_edge_emb)
+
+        # score = self.train_base_score(base_out)
         if mode == 'train':
-            return score, lable, hyper_edge_emb, self.reg_l2(x)
+            return predict, lable, hyper_edge_emb, self.reg_l2(x)
         else:
-            return score, lable, hyper_edge_emb
+            return predict, lable, hyper_edge_emb
 
     def double_train(self, data, mode="double"):
         n_id, x, adjs, split_idx = data
@@ -265,8 +288,8 @@ class HyperGraphV3(Module):
         # mlp_vector = self.fc1(mlp_vector)
         # predict_vector = torch.cat([mf_vector, mlp_vector], dim=-1)
 
+        # predict_vector = self.dropout(predict_vector)
         predict_vector = self.dropout(mf_vector)
-        # predict_vector = self.dropout(mf_vector)
         predict_vector = self.ce_predictor(predict_vector)
         return predict_vector
     
@@ -292,27 +315,30 @@ class HyperGraphV3(Module):
         label = label.cuda()
 
 
-        score = model.base_score(sampler_h, sampler_t)
-        score = score.squeeze()
-        loss = model.loss_funcation(score, label)
-        loss = loss 
-        # loss = 0
+        # score = model.base_score(sampler_h, sampler_t)
+        # score = score.squeeze()
+        # loss = model.loss_funcation(score, label)
+        # loss = loss 
+        loss = 0
         
         add_cl = True
         if add_cl :
             single_data, double_data,base_out = next(sampler)
 
             score, label, single_emb, reg_weight = model.lable_train(single_data,base_out)
+            score = score.squeeze(-1)
             double_emb =  model.double_train(double_data)
             cl_loss = model.caculate_cl_loss(single_emb, double_emb)
 
             cl_loss_weighted = config["cl_weight"] * cl_loss 
             reg_loss_weighted = reg_weight * config["reg_weight"]
 
+            label = label.cuda()
+            loss = torch.nn.BCELoss()(score, label)
             loss = loss + reg_loss_weighted +  cl_loss_weighted
 
-        add_ec = True
-        add_ko = True
+        add_ec = False
+        add_ko = False
 
         if add_ec:
             loss_ec_mf, loss_ec_mlp = 0.0, 0.0
@@ -339,8 +365,8 @@ class HyperGraphV3(Module):
             "loss": loss.item(),
             "cl_loss": cl_loss_weighted.item(),
             "reg_loss": reg_loss_weighted.item(),
-            "ec_loss": loss_ec.item(),
-            "ko_loss": loss_enzyme_ko.item()
+            # "ec_loss": loss_ec.item(),
+            # "ko_loss": loss_enzyme_ko.item()
         }
         return logs
 

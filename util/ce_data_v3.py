@@ -203,7 +203,7 @@ class CEGraphSampler(torch.utils.data.DataLoader):
             self.mask_true = self.train_info["edgeid2true_train"]
         else:
             self.mask_true = self.train_info["edgeid2true_all"]
-            self.n_size = 5000
+            # self.n_size = 5000
 
         self.num_nodes = self.graph_info["max_edge_id"]
 
@@ -237,6 +237,8 @@ class CEGraphSampler(torch.utils.data.DataLoader):
             sparse_sizes=(self.num_nodes, self.num_nodes)
         ).t()
 
+        self.negLabel =  torch.zeros(self.n_size+1) 
+        self.negLabel[0] = 1
         # 需要构建一个新的sampler， 增加了负采样的sample
         node_idx = torch.tensor(node_idx)
         print("sampler range:")
@@ -254,33 +256,75 @@ class CEGraphSampler(torch.utils.data.DataLoader):
       
         super(CEGraphSampler, self).__init__(node_idx.view(-1).tolist(), collate_fn=self.sample,batch_size=batch_size,**kwargs)
 
+
+    def get_ne(self, label):
+        negative_sample_list = [[label - self.c_num]]
+        negative_sample_size = 0
+        while negative_sample_size < self.n_size:
+            
+            negative_sample = np.random.randint(0,self.e_num, size=self.n_size*2)
+            mask = np.in1d(
+                negative_sample, 
+                [label], 
+                assume_unique=True, 
+                invert=True
+            )
+            negative_sample = negative_sample[mask] # filter true triples
+            negative_sample_list.append(negative_sample)
+            negative_sample_size += negative_sample.size
+
+        negative_sample = np.concatenate(negative_sample_list)[:self.n_size+1]
+        sample_t = torch.LongTensor(negative_sample)
+        shuffle_idx = torch.randperm(sample_t.nelement())
+        return sample_t[shuffle_idx], self.negLabel[shuffle_idx]
+
+    def get_ne_test(self):
+        negative_sample =  [i for i in range(self.e_num)]
+        return torch.LongTensor(negative_sample)
+
+
     def sample(self, batch):
         sample_idx = [i - self.n_node for i in batch]  # 输入是超边的id，然后转为从0开始的index，这样才能获取到正确的label
         
         lable = self.label[sample_idx] 
+        ne_list = []
+        ne_labels = []
+        if self.mode == "train":
+            for i in range(len(lable)):
+                ne, ne_label = self.get_ne(lable[i])
+                ne_list.append(ne)
+                ne_labels.append(ne_label)
+            ne_list = torch.stack(ne_list, dim=0)
+            lable = torch.stack(ne_labels, dim=0)
+        else:
+            for i in range(len(lable)):
+                ne = self.get_ne_test()
+                ne_list.append(ne)
+            ne_list = torch.stack(ne_list, dim=0)
+            lable = lable - self.c_num
         sample_idx = torch.LongTensor(sample_idx)
         n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
         
-        # 采样超边 -> 化合物的过程
-        base_adj = []
-        for i, size in enumerate(self.sizes):
+        # # 采样超边 -> 化合物的过程
+        # base_adj = []
+        # for i, size in enumerate(self.sizes):
 
-            if i == len(self.sizes) - 1:
-                # Sample ci2traj one-hop checkin relation
-                split_idx = len(n_id)
-                adj_t, base_nid = self.ci2traj_adj_t.sample_adj(n_id, size, replace=False)
-                row, col, e_id = adj_t.coo()
-                edge_attr = None
-                edge_type = None
-            else:
-                continue
+        #     if i == len(self.sizes) - 1:
+        #         # Sample ci2traj one-hop checkin relation
+        #         split_idx = len(n_id)
+        #         adj_t, base_nid = self.ci2traj_adj_t.sample_adj(n_id, size, replace=False)
+        #         row, col, e_id = adj_t.coo()
+        #         edge_attr = None
+        #         edge_type = None
+        #     else:
+        #         continue
             
-            size = adj_t.sparse_sizes()[::-1]
-            base_adj.append((adj_t, edge_attr,  edge_type, e_id, size))
+        #     size = adj_t.sparse_sizes()[::-1]
+        #     base_adj.append((adj_t, edge_attr,  edge_type, e_id, size))
 
-        base_input_x =  self.node_emb[base_nid[split_idx:]]
-        base_out = (base_nid, base_input_x, base_adj, lable - self.c_num,split_idx)
-
+        # base_input_x =  self.node_emb[base_nid[split_idx:]]
+        # base_out = (base_nid, base_input_x, base_adj, lable - self.c_num,split_idx)
+        base_out = None
         
         adjs = [] 
         for i, size in enumerate(self.sizes):
@@ -306,7 +350,7 @@ class CEGraphSampler(torch.utils.data.DataLoader):
 
         input_x =  self.node_emb[n_id[split_idx:]]
 
-        out = (n_id, input_x, adjs, lable - self.c_num,split_idx)
+        out = (n_id, input_x, adjs, ne_list, lable,split_idx)
 
         
         if self.mode == "train":

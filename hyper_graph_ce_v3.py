@@ -168,14 +168,16 @@ def test_inductive(model, sampler):
         # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
         # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
         # score = n_score
-
         score, label = model.lable_predict_base(data,mode="test")
         # score = score[:,1:]
         # score = score.squeeze(-1)
         argsort = torch.argsort(score, dim = 1, descending=True)
+        # print(score.shape)
+        # print(label.shape)
 
         for i in range(score.shape[0]):
             ranking = (argsort[i, :] == label[i]).nonzero()
+            # print(ranking)
             assert ranking.size(0) == 1
             ranking = 1 + ranking.item()
             logs.append({
@@ -328,7 +330,7 @@ if __name__=="__main__":
         # {
         #     'params':node_emb.weight,
         # },
-        ], lr=lr,
+        ], lr=lr#,weight_decay=1e-6
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))
@@ -377,12 +379,12 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 and step != 0:
+            if step % test_step == 0:
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
-                # metrics = test_inductive(model,valid_sampler)
-                metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
+                metrics = test_inductive(model,valid_sampler)
+                # metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ',step, metrics)
@@ -406,7 +408,8 @@ if __name__=="__main__":
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
-        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        # metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
 
     else:

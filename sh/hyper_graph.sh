@@ -288,6 +288,8 @@ CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --configName cl_0221_04
 
 CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/ce_data_v3_debug &
 
+
+
 CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_01 --save_path ./models/ce_data_v3_0303_1 &
 CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_03_02 --save_path ./models/ce_data_v3_0303_2 &
 CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_03_03 --save_path ./models/ce_data_v3_0303_3 &
@@ -299,7 +301,7 @@ CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl
 # only cl learning
 CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_03_03 --save_path ./models/ce_data_v3_0304_3 &
 
-CUDA_VISIBLE_DEVICES=5 python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/ce_data_v3_add_help_0304_1 &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/ce_data_v3_add_help_0304_1 &
 
 
 
@@ -309,9 +311,22 @@ CUDA_VISIBLE_DEVICES=5 python hyper_graph_ce_v3.py --train --configName cl_0221_
 # CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_02 --save_path ./models/ce_data_v2_baseline_0227_32 &
 # CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_03 --save_path ./models/ce_data_v2_baseline_0227_33 &
 # CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_04 --save_path ./models/ce_data_v2_baseline_0227_34 &
-
-
 # 去掉对比学习, 混合score
 CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_no_cl_0304_1 &
 # 去掉对比学习， 混合score 同一个embedding混合
-CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_no_cl_mix_score_0304_1 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_no_cl_mix_score_0304_1 &
+
+
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_baseline --save_path ./models/cl_v3_0221_baseline &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_baseline --save_path ./models/cl_v3_0221_baseline_01 &
+
+
+CUDA_VISIBLE_DEVICES=4 python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/cl_v3_equation_predicat_01
+
+
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_03_06 --save_path ./models/ce_data_v3_0305_clweight_1 &
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_03_05 --save_path ./models/ce_data_v3_0305_clweight_2 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_04 --save_path ./models/ce_data_v3_0305_clweight_3 &
