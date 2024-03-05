@@ -269,20 +269,25 @@ class HyperGraphV3(Module):
 
         if mode =="train":
             mf_embedding_compound = mf_embedding_compound.unsqueeze(1)
-            # node_embedding = node_embedding.unsqueenze(1)
+        # node_embedding = node_embedding.unsqueenze(1)
+        
 
         mf_vector = mf_embedding_enzyme * mf_embedding_compound
 
-        mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
-        mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
-
         if mode == "train":
-            mlp_embedding_compound = mlp_embedding_compound.unsqueeze(1)
-            mlp_embedding_compound = mlp_embedding_compound.repeat(1,mlp_embedding_enzyme.shape[1],1)
+            mf_embedding_compound = mf_embedding_compound.repeat(1,mf_embedding_enzyme.shape[1],1)
         else:
-            mlp_embedding_compound = mlp_embedding_compound.repeat(mlp_embedding_enzyme.shape[0],1)
+            mf_embedding_compound = mf_embedding_compound.repeat(1,mf_embedding_enzyme.shape[1])
+        # mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
+        # mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
 
-        mlp_vector = torch.cat([mlp_embedding_enzyme, mlp_embedding_compound], dim=-1)
+        # if mode == "train":
+        #     mlp_embedding_compound = mlp_embedding_compound.unsqueeze(1)
+        #     mlp_embedding_compound = mlp_embedding_compound.repeat(1,mlp_embedding_enzyme.shape[1],1)
+        # else:
+        #     mlp_embedding_compound = mlp_embedding_compound.repeat(mlp_embedding_enzyme.shape[0],1)
+
+        mlp_vector = torch.cat([mf_embedding_enzyme, mf_embedding_compound], dim=-1)
         mlp_vector = self.fc1(mlp_vector)
         
         predict_vector = torch.cat([mf_vector, mlp_vector], dim=-1)
@@ -290,6 +295,43 @@ class HyperGraphV3(Module):
         # predict_vector = self.dropout(mf_vector)
         predict_vector = self.ce_predictor(predict_vector)
         return predict_vector,self.reg_l2(input_x)
+
+    # def base_score(self, compound_ids, enzyme_ids,toNodeData, mode="valid"):
+
+    #     n_id, adjs, split_idx = toNodeData
+    #     n_id = n_id.cuda()
+        
+    #     input_x =  self.node_emb(n_id[split_idx:])
+    #     node_embedding = self.encoder(input_x, adjs,split_idx, True,mode='node')
+
+
+    #     mf_embedding_compound = node_embedding
+    #     mf_embedding_enzyme = self.node_emb(enzyme_ids+self.c_num)
+
+    #     if mode =="train":
+    #         mf_embedding_compound = mf_embedding_compound.unsqueeze(1)
+    #         # node_embedding = node_embedding.unsqueenze(1)
+    #         mf_embedding_compound = mf_embedding_compound.repeat(1,mf_embedding_enzyme.shape[1],1)
+
+    #     mf_vector = mf_embedding_enzyme * mf_embedding_compound
+
+    #     # mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
+    #     # mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
+
+    #     # if mode == "train":
+    #     #     mlp_embedding_compound = mlp_embedding_compound.unsqueeze(1)
+    #     #     mlp_embedding_compound = mlp_embedding_compound.repeat(1,mlp_embedding_enzyme.shape[1],1)
+    #     # else:
+    #     #     mlp_embedding_compound = mlp_embedding_compound.repeat(mlp_embedding_enzyme.shape[0],1)
+
+    #     mlp_vector = torch.cat([mlp_embedding_enzyme, mlp_embedding_compound], dim=-1)
+    #     mlp_vector = self.fc1(mlp_vector)
+        
+    #     predict_vector = torch.cat([mf_vector, mlp_vector], dim=-1)
+    #     predict_vector = self.dropout(predict_vector)
+    #     # predict_vector = self.dropout(mf_vector)
+    #     predict_vector = self.ce_predictor(predict_vector)
+    #     return predict_vector,self.reg_l2(input_x)
     
     @staticmethod
     def train_step(model,optimizer,data,loss_funcation, margin=0.2, rel_samper=None, config=None,sampler=None,help_data=None):
@@ -306,7 +348,7 @@ class HyperGraphV3(Module):
         loss = model.loss_funcation(score, label)
         loss = loss 
         
-        add_cl = True
+        add_cl = False
         if add_cl :
             single_data, double_data = next(sampler)
             single_emb, double_emb = model.cl_train(single_data,double_data)
@@ -320,7 +362,7 @@ class HyperGraphV3(Module):
         optimizer.step()
         logs = {    
             "loss": loss.item(),
-            "cl_loss": cl_loss_weighted.item(),
+            # "cl_loss": cl_loss_weighted.item(),
             "reg_loss": reg_loss_weighted.item(),
         }
         return logs

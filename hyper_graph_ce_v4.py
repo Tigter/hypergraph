@@ -376,7 +376,7 @@ if __name__=="__main__":
                 metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
-                logset.log_metrics('Valid ',step, metrics)
+                logset.log_metrics('Valid ', step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in train_iter:
                 log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,sampler=sampler,help_data=help_data)
@@ -400,3 +400,7 @@ if __name__=="__main__":
         metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
        
+    else:
+        logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
+        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
+        logset.log_metrics('Test ',checkpoint['step'], metrics)

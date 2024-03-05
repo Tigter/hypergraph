@@ -47,7 +47,6 @@ class HyperGraphV3(Module):
         self.c_num = graph_info["c_num"]
         self.e_num = graph_info["e_num"]
 
-
         self.cl_mlp1 = torch.nn.Sequential(
             torch.nn.Linear(hyperkgeConfig.embedding_dim, hyperkgeConfig.embedding_dim),
             torch.nn.Sigmoid()
@@ -79,8 +78,22 @@ class HyperGraphV3(Module):
 
         self.baseGnn = MulScoreGnn()
         self.ec_predictor = []
-        for ec_dim in [13, 86, 312]:
-            self.ec_predictor.append(MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=0.5, sigmoid_last_layer=False))
+        
+        # for ec_dim in [13, 86, 312]:
+
+        ec_dim = 13
+        self.ec_predicor_1 = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=0.5, sigmoid_last_layer=False)
+
+        ec_dim = 86
+        self.ec_predicor_2 = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=0.5, sigmoid_last_layer=False)
+        
+        ec_dim = 312
+        self.ec_predicor_3 = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=ec_dim, dropout=0.5, sigmoid_last_layer=False)
+
+        self.ec_predictor.append(self.ec_predicor_1)
+        self.ec_predictor.append(self.ec_predicor_2)
+        self.ec_predictor.append(self.ec_predicor_3)
+
 
         self.ko_predictor = MLPModel(input_dim=hidden_dim, hidden_dim=hidden_dim, output_dim=6903, dropout=0.5, sigmoid_last_layer=True)
 
@@ -212,6 +225,8 @@ class HyperGraphV3(Module):
 
     def lable_train(self, pos_data,base_out, mode="train"):
         n_id, x, adjs, lable,split_idx = pos_data
+        n_id = n_id.cuda()
+        x =  self.node_emb(n_id[split_idx:])
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
         # score  = self.ce_predictor(hyper_edge_emb)
         score = self.train_base_score(base_out)
@@ -222,12 +237,14 @@ class HyperGraphV3(Module):
 
     def double_train(self, data, mode="double"):
         n_id, x, adjs, split_idx = data
+        n_id = n_id.cuda()
+        x = self.node_emb(n_id[split_idx:])
         hyper_edge_emb = self.encoder(n_id,x, adjs, None,split_idx, True,mode=mode)
         return hyper_edge_emb
 
     def caculate_cl_loss(self, single_emb, double_emb):
-        # single_emb = self.cl_mlp1(single_emb)
-        # single_emb = self.cl_mlp2(single_emb)
+        single_emb = self.cl_mlp1(single_emb)
+        single_emb = self.cl_mlp2(single_emb)
         score = single_emb @ double_emb.transpose(0,1)
 
         batch_size = len(single_emb)
@@ -242,14 +259,14 @@ class HyperGraphV3(Module):
         mf_embedding_enzyme = self.node_emb(enzyme_ids+self.c_num)
         mf_vector = mf_embedding_enzyme * mf_embedding_compound
 
-        mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
-        mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
-        mlp_vector = torch.cat([mlp_embedding_enzyme, mlp_embedding_compound], dim=-1)
-        mlp_vector = self.fc1(mlp_vector)
-        
-        predict_vector = torch.cat([mf_vector, mlp_vector], dim=-1)
-        predict_vector = self.dropout(predict_vector)
+        # mlp_embedding_compound = self.MLP_Embedding_Compound(compound_ids)
+        # mlp_embedding_enzyme = self.MLP_Embedding_Enzyme(enzyme_ids)
+        # mlp_vector = torch.cat([mlp_embedding_enzyme, mlp_embedding_compound], dim=-1)
+        # mlp_vector = self.fc1(mlp_vector)
+        # predict_vector = torch.cat([mf_vector, mlp_vector], dim=-1)
+
         predict_vector = self.dropout(mf_vector)
+        # predict_vector = self.dropout(mf_vector)
         predict_vector = self.ce_predictor(predict_vector)
         return predict_vector
     
@@ -279,6 +296,7 @@ class HyperGraphV3(Module):
         score = score.squeeze()
         loss = model.loss_funcation(score, label)
         loss = loss 
+        # loss = 0
         
         add_cl = True
         if add_cl :
@@ -293,27 +311,27 @@ class HyperGraphV3(Module):
 
             loss = loss + reg_loss_weighted +  cl_loss_weighted
 
-        # add_ec = True
-        # add_ko = True
+        add_ec = True
+        add_ko = True
 
-        # if add_ec:
-        #     loss_ec_mf, loss_ec_mlp = 0.0, 0.0
-        #     ec_loss_w = [1./3., 1./3., 1./3.]
-        #     for j  in range(3):
-        #         ec_indices = torch.arange(model.e_num).cuda() # ec 的 id list
-        #         ec_label_j = help_data["ec_label"][:,j]
-        #         loss_ec_mf += ec_loss_w[j] * torch.nn.CrossEntropyLoss()(model.predict_ec(ec_indices, j, mf=True), ec_label_j)
-        #         # loss_ec_mlp += ec_loss_w[j] * torch.nn.CrossEntropyLoss()(model.predict_ec(ec_indices, j, mf=False), ec_label_j)
-        #     loss_ec = loss_ec_mf
-        #     loss += loss_ec
+        if add_ec:
+            loss_ec_mf, loss_ec_mlp = 0.0, 0.0
+            ec_loss_w = [1./3., 1./3., 1./3.]
+            for j  in range(3):
+                ec_indices = torch.arange(model.e_num).cuda() # ec 的 id list
+                ec_label_j = help_data["ec_label"][:,j]
+                loss_ec_mf += ec_loss_w[j] * torch.nn.CrossEntropyLoss()(model.predict_ec(ec_indices, j, mf=True), ec_label_j)
+                # loss_ec_mlp += ec_loss_w[j] * torch.nn.CrossEntropyLoss()(model.predict_ec(ec_indices, j, mf=False), ec_label_j)
+            loss_ec = loss_ec_mf
+            loss += loss_ec
 
-        # if add_ko:
-        #     enzyme= help_data["enzyme_ko_hot"][:,0]
-        #     enzyme_one_hot_label = help_data["enzyme_ko_hot"][:,1:]
-        #     loss_ko_mf =  torch.nn.CrossEntropyLoss()(model.predict_ko(enzyme, mf=True), enzyme_one_hot_label, weights=[1.0, 1.0])
-        #     # loss_ko_mlp =  torch.nn.CrossEntropyLoss()(model.predict_ko(enzyme, mf=False), enzyme_one_hot_label, weights=[1.0, 1.0])
-        #     loss_enzyme_ko = loss_ko_mf #+ loss_ko_mlp
-        #     loss += loss_enzyme_ko
+        if add_ko:
+            enzyme= help_data["enzyme_ko"][:,0]
+            enzyme_one_hot_label = help_data["enzyme_ko"][:,1:]
+            loss_ko_mf =  torch.nn.BCELoss()(model.predict_ko(enzyme, mf=True), enzyme_one_hot_label.float())
+            # loss_ko_mlp =  torch.nn.CrossEntropyLoss()(model.predict_ko(enzyme, mf=False), enzyme_one_hot_label, weights=[1.0, 1.0])
+            loss_enzyme_ko = loss_ko_mf #+ loss_ko_mlp
+            loss += loss_enzyme_ko
 
         loss.backward()
         optimizer.step()
@@ -321,6 +339,8 @@ class HyperGraphV3(Module):
             "loss": loss.item(),
             "cl_loss": cl_loss_weighted.item(),
             "reg_loss": reg_loss_weighted.item(),
+            "ec_loss": loss_ec.item(),
+            "ko_loss": loss_enzyme_ko.item()
         }
         return logs
 

@@ -46,7 +46,7 @@ def logging_log(step, logs,writer):
     logset.log_metrics('Training average', step, metrics)
 
 def load_interaction_data():
-    with open('/home/skl/yl/Boost-RS/data/kegg/base_data/boost-format/boostrc_format_kegg_data_new.pkl', 'rb') as fi:
+    with open('/home/skl/yl/Boost-RS/data/kegg/base_data/boost-format/boostrc_format_kegg_data_v2.pkl', 'rb') as fi:
         data = pickle.load(fi)
         fi.close()
 
@@ -246,7 +246,7 @@ if __name__=="__main__":
     # 读取4个数据集
     setup_seed(20)
     args = set_config()
-    with open('./config/hypergraph_ce_v2.yml','r', encoding='utf-8') as f:
+    with open('./config/hyper_graph_cl.yml','r', encoding='utf-8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         baseConfig = config['baseConfig']
         modelConfig = config[args.configName]
@@ -317,7 +317,10 @@ if __name__=="__main__":
     model.node_emb = node_emb
     if cuda:
         model = model.cuda()
-       
+
+    # for name, param in model.named_parameters():
+    #     if param.requires_grad:
+    #         print(name)
     optimizer = torch.optim.Adam([
         {
             'params':filter(lambda p: p.requires_grad, model.parameters())
@@ -334,8 +337,8 @@ if __name__=="__main__":
         logging.info('init: %s' % init_path)
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
         model.load_state_dict(checkpoint['model_state_dict'],strict=False)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        lr = optimizer.state_dict()['param_groups'][0]['lr']
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # lr = optimizer.state_dict()['param_groups'][0]['lr']
         init_step = checkpoint['step']
 
     logging.info('Model: %s' % modelConfig['name'])
@@ -374,7 +377,7 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 :
+            if step % test_step == 0 and step != 0:
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
@@ -402,6 +405,11 @@ if __name__=="__main__":
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
+        logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
+        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        logset.log_metrics('Test ',checkpoint['step'], metrics)
+
+    else:
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
         metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
         logset.log_metrics('Test ',checkpoint['step'], metrics)

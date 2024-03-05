@@ -319,7 +319,7 @@ if __name__=="__main__":
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
         metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
-       
+
     # if args.test :
     # 模型embedding debug 分析工具
     if args.debug :

@@ -258,8 +258,60 @@ CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl
 CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_04 --save_path ./models/ce_data_v2_baseline_0227_34 &
 
 
-CUDA_VISIBLE_DEVICES=4 python hyper_graph_ce_v4.py --train --configName cl_0221_01 --save_path ./models/ce_data_v4_0227_31
-CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_0227_32 &
-CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_03 --save_path ./models/ce_data_v4_0227_33 &
-CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_04 --save_path ./models/ce_data_v4_0227_34 &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v4.py --configName cl_0221_01 --save_path ./models/ce_data_v4_0227_31 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_31/hit10/ &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v4.py --configName cl_0221_02 --save_path ./models/ce_data_v4_0227_32 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_32/hit10/ &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v4.py --configName cl_0221_03 --save_path ./models/ce_data_v4_0227_33 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_33/hit10/ &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v4.py --configName cl_0221_04 --save_path ./models/ce_data_v4_0227_34 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_34/hit10/ &
 
+
+# single score
+# CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v4.py --configName cl_0221_01 --save_path ./models/ce_data_v4_0227_21  --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_21/hit10/ &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v4.py --configName cl_0221_02 --save_path ./models/ce_data_v4_0227_22 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_22/hit10/ &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v4.py --configName cl_0221_03 --save_path ./models/ce_data_v4_0227_23 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_23/hit10/ &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v4.py --configName cl_0221_04 --save_path ./models/ce_data_v4_0227_24 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v4_0227_24/hit10/ &
+
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_01 --save_path ./models/ce_data_v2_baseline_0227_31 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_31/hit10/ &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --configName cl_0221_02 --save_path ./models/ce_data_v2_baseline_0227_32 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_32/hit10/ &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_03 --save_path ./models/ce_data_v2_baseline_0227_33 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_33/hit10/ &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --configName cl_0221_04 --save_path ./models/ce_data_v2_baseline_0227_34 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_34/hit10/ &
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_01 --save_path ./models/ce_data_v2_baseline_0227_11 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_11/hit1/ &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --configName cl_0221_02 --save_path ./models/ce_data_v2_baseline_0227_12 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_12/hit1/ &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_03 --save_path ./models/ce_data_v2_baseline_0227_13 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_13/hit1/ &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --configName cl_0221_04 --save_path ./models/ce_data_v2_baseline_0227_14 --init /home/skl/yl/ce_project/relation_cl/models/models/ce_data_v2_baseline_0227_14/hit1/ &
+
+
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/ce_data_v3_debug &
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_01 --save_path ./models/ce_data_v3_0303_1 &
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_03_02 --save_path ./models/ce_data_v3_0303_2 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_03_03 --save_path ./models/ce_data_v3_0303_3 &
+
+# CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_01 --save_path ./models/ce_data_v3_0303_1 &
+# add mlp
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_02 --save_path ./models/ce_data_v3_0304_1 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_03_03 --save_path ./models/ce_data_v3_0304_2 &
+# only cl learning
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_03_03 --save_path ./models/ce_data_v3_0304_3 &
+
+CUDA_VISIBLE_DEVICES=5 python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/ce_data_v3_add_help_0304_1 &
+
+
+
+
+
+
+# CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_02 --save_path ./models/ce_data_v2_baseline_0227_32 &
+# CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_03 --save_path ./models/ce_data_v2_baseline_0227_33 &
+# CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_04 --save_path ./models/ce_data_v2_baseline_0227_34 &
+
+
+# 去掉对比学习, 混合score
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_no_cl_0304_1 &
+# 去掉对比学习， 混合score 同一个embedding混合
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/ce_data_v4_no_cl_mix_score_0304_1 &
