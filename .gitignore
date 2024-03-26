@@ -1,8 +1,8 @@
 nohup.out
 __pycache__
 */__pycache__
-*.txt
-*.json
+# *.txt
+# *.json
 models/*
 *.log
 pre_handle_data/*
