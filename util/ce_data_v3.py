@@ -11,8 +11,11 @@ from collections import defaultdict
 
 def load_data():
 
-    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_base_graph_info.pkl")
-    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_base_train_info.pkl")
+    # graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_base_graph_info.pkl")
+    # train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_double_base_train_info.pkl")
+
+    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_v3_filter_graph_info.pkl")
+    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/ce_data_v3_filter_train_info.pkl")
     return graph_info, train_info
 
 def build_graph_sampler(config):
@@ -289,19 +292,19 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         lable = self.label[sample_idx] 
         ne_list = []
         ne_labels = []
-        if self.mode == "train":
-            for i in range(len(lable)):
-                ne, ne_label = self.get_ne(lable[i])
-                ne_list.append(ne)
-                ne_labels.append(ne_label)
-            ne_list = torch.stack(ne_list, dim=0)
-            lable = torch.stack(ne_labels, dim=0)
-        else:
-            for i in range(len(lable)):
-                ne = self.get_ne_test()
-                ne_list.append(ne)
-            ne_list = torch.stack(ne_list, dim=0)
-            lable = lable - self.c_num
+        # if self.mode == "train":
+        #     for i in range(len(lable)):
+        #         ne, ne_label = self.get_ne(lable[i])
+        #         ne_list.append(ne)
+        #         ne_labels.append(ne_label)
+        #     ne_list = torch.stack(ne_list, dim=0)
+        #     lable = torch.stack(ne_labels, dim=0)
+        # else:
+        #     for i in range(len(lable)):
+        #         ne = self.get_ne_test()
+        #         ne_list.append(ne)
+        #     ne_list = torch.stack(ne_list, dim=0)
+        #     lable = lable - self.c_num
         sample_idx = torch.LongTensor(sample_idx)
         n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
         

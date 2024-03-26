@@ -28,7 +28,7 @@ def parse_args(args=None):
     parser.add_argument('--dropout3', type=float, default = 0.3)    
     parser.add_argument('--label_smoothing', type=float, default = 0.1)  
 
-    parser.add_argument('-n', '--negative_sample_size', default=128, type=int)
+    parser.add_argument('-n', '--negative_sample_size', default=500, type=int)
     # add rotpro
     parser.add_argument('-alpha', '--alpha', default=0.25, type=float)
 

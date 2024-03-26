@@ -208,6 +208,7 @@ class HyperGraphV3(Module):
         predict = self.ne_score(ne_list, hyper_edge_emb)
         predict = predict.squeeze(-1)
         return predict,lable
+    
     def reg_l2(self, x):
         return torch.mean(torch.norm(x,dim=-1))
 
@@ -250,7 +251,8 @@ class HyperGraphV3(Module):
         hyper_edge_emb = self.encoder(n_id,x, adjs, lable,split_idx, True)
         # score  = self.ce_predictor(hyper_edge_emb)
 
-        predict = self.ne_score(ne_list, hyper_edge_emb)
+        # predict = self.ne_score(ne_list, hyper_edge_emb)
+        predict = None
 
         # score = self.train_base_score(base_out)
         if mode == 'train':
@@ -314,27 +316,24 @@ class HyperGraphV3(Module):
         sampler_t = sampler_t.cuda()
         label = label.cuda()
 
-
-        # score = model.base_score(sampler_h, sampler_t)
-        # score = score.squeeze()
-        # loss = model.loss_funcation(score, label)
-        # loss = loss 
-        loss = 0
+        score = model.base_score(sampler_h, sampler_t)
+        score = score.squeeze()
+        loss = model.loss_funcation(score, label)
         
         add_cl = True
         if add_cl :
             single_data, double_data,base_out = next(sampler)
 
             score, label, single_emb, reg_weight = model.lable_train(single_data,base_out)
-            score = score.squeeze(-1)
+            # score = score.squeeze(-1)
             double_emb =  model.double_train(double_data)
             cl_loss = model.caculate_cl_loss(single_emb, double_emb)
 
             cl_loss_weighted = config["cl_weight"] * cl_loss 
             reg_loss_weighted = reg_weight * config["reg_weight"]
 
-            label = label.cuda()
-            loss = torch.nn.BCELoss()(score, label)
+            # label = label.cuda()
+            # loss = torch.nn.BCELoss()(score, label)
             loss = loss + reg_loss_weighted +  cl_loss_weighted
 
         add_ec = False
@@ -369,34 +368,6 @@ class HyperGraphV3(Module):
             # "ko_loss": loss_enzyme_ko.item()
         }
         return logs
-
-    # @staticmethod
-    # def train_step(model,optimizer,data,loss_funcation, margin=0.2, rel_samper=None, config=None):
-    #     optimizer.zero_grad()
-    #     model.train()
-
-    #     single_data, double_data,base_out = data
-
-    #     score, label, single_emb, reg_weight = model.lable_train(single_data,base_out)
-    #     double_emb =  model.double_train(double_data)
-
-    #     label = label.cuda()    
-    #     loss = model.loss_funcation(score, label)
-
-    #     cl_loss = model.caculate_cl_loss(single_emb, double_emb)
-
-    #     cl_loss_weighted = config["cl_weight"] * cl_loss 
-    #     reg_loss_weighted = reg_weight * config["reg_weight"]
-    #     loss = loss + reg_loss_weighted +  cl_loss_weighted
-
-    #     loss.backward()
-    #     optimizer.step()
-    #     logs = {    
-    #         "loss": loss.item(),
-    #         "cl_loss": cl_loss_weighted.item(),
-    #         "reg_loss": reg_loss_weighted.item(),
-    #     }
-    #     return logs
 
 
 

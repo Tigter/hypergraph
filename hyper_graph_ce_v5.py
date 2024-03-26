@@ -28,9 +28,9 @@ from torchstat import stat
 import argparse
 import torch.nn.functional as F
 
-from util.ce_data_v4 import *
+from util.ce_data_v5 import *
 import random
-from core.HyperGraphV24 import HyperGraphV3
+from core.HyperGraphV25 import HyperGraphV3
 
 import pickle
 #!!!!!!!!!!!!!!!!!!!!!!!!#
@@ -46,7 +46,7 @@ def logging_log(step, logs,writer):
     logset.log_metrics('Training average', step, metrics)
 
 def load_interaction_data():
-    with open('/home/skl/yl/Boost-RS/data/kegg/base_data/boost-format/boostrc_format_kegg_data_new.pkl', 'rb') as fi:
+    with open('/home/skl/yl/Boost-RS/data/kegg/base_data/boost-format/boostrc_format_kegg_data_v2.pkl', 'rb') as fi:
         data = pickle.load(fi)
         fi.close()
 
@@ -148,30 +148,9 @@ def test_inductive(model, sampler):
         if count % 400 == 0:
             print("test step count: %d" % count)
 
-        # pos_data, rel_pos,rel_neg = data
-
-        # n_id, x, adjs, lable,split_idx = pos_data
-
-        # hyper_edge_emb = model.encoder(n_id,x, adjs, lable,split_idx, True)
-        # # hyper_edge_emb = hyper_edge_emb.unsqueeze(1)
-        # batch_size = len(hyper_edge_emb)
-        # score  = model.ce_predictor(hyper_edge_emb)
-        # r_n_id, r_x, r_adjs,split_idx = rel_pos
-        # relation_emb = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # rel_emb  = relation_emb.unsqueeze(1)
-        # r_n_id, r_x, r_adjs,split_idx = rel_neg
-        # relation_emb_neg = model.encoder(r_n_id, r_x, r_adjs , None,split_idx, True)
-        # relation_emb_neg  = relation_emb_neg.reshape(batch_size,-1, model.hyperkgeConfig.embedding_dim)
-        
-        # # p_score = torch.cosine_similarity(hyper_edge_emb, rel_emb)
-        # # n_score =  torch.cosine_similarity(hyper_edge_emb, relation_emb_neg)
-        # p_score =  torch.norm(hyper_edge_emb * rel_emb,p=2,dim=-1)
-        # n_score =  torch.norm(hyper_edge_emb * relation_emb_neg, p=2,dim=-1)
-        # score = n_score
-
         score, label = model.lable_predict_base(data,mode="test")
-        # score = score[:,1:]
-        # score = score.squeeze(-1)
+        score = score.squeeze(-1)
+       
         argsort = torch.argsort(score, dim = 1, descending=True)
 
         for i in range(score.shape[0]):
@@ -199,17 +178,13 @@ def setup_seed(seed):
      torch.backends.cudnn.deterministic = True
 
 
-def evaluate(model, reaction, e_number, c2eList, graph_info,train_info, config):
+def evaluate(model, reaction, e_number, c2eList, graph_info):
     # reaction[0]: c data  reaction[1]: e data
     # c2eList: c data to all e
     # 数据量不是很大，直接开始做吧
     c2id = graph_info['c2id']
     e2id = graph_info['e2id']
-    toNodeSampler = ToNodeSampler(graph_info, train_info, 
-        train_info["test_id_list"],
-            batch_size=16,
-            size=config["node_sampler_size"],
-            mode="valid",config=config)
+
     logs = []
     for c_list, e in reaction:
         e = e2id[e] - graph_info['c_num']
@@ -218,17 +193,12 @@ def evaluate(model, reaction, e_number, c2eList, graph_info,train_info, config):
         for c in c_list:
 
             neg_e = torch.LongTensor(range(0, e_number))
-            # input_c =torch.LongTensor([c2id[c] for i in range(e_number)])
-
-            input_c =torch.LongTensor([c2id[c]])
-            toNodeData = toNodeSampler.sample(input_c)
-
-            
+            input_c =torch.LongTensor([c2id[c] for i in range(e_number)])
             neg_e = neg_e.cuda()
             input_c = input_c.cuda()
 
             # 模型预测的 score
-            pred_interaction_ , _ = model.base_score(input_c, neg_e, toNodeData) # 1*e_number 的 score
+            pred_interaction_ = model.base_score(input_c, neg_e) # 1*e_number 的 score
             pred_interaction_ = pred_interaction_.squeeze()
             if e not in c2eList[c2id[c]]:
                 print("error")
@@ -238,15 +208,14 @@ def evaluate(model, reaction, e_number, c2eList, graph_info,train_info, config):
             ranking = (argsort[:] == e).nonzero()
             rank_list.append(ranking.item()+1)
 
-            # rank = np.max(rank_list)
-            rank = ranking.item()+1
-            logs.append({
-                'MRR': 1.0/rank,
-                'MR': float(rank),
-                'HITS@1': 1.0 if rank <= 1 else 0.0,
-                'HITS@3': 1.0 if rank <= 50 else 0.0,
-                'HITS@10': 1.0 if rank <= 100 else 0.0,
-            })
+        rank = np.max(rank_list)
+        logs.append({
+            'MRR': 1.0/rank,
+            'MR': float(rank),
+            'HITS@1': 1.0 if rank <= 1 else 0.0,
+            'HITS@3': 1.0 if rank <= 50 else 0.0,
+            'HITS@10': 1.0 if rank <= 100 else 0.0,
+        })
     metrics = {}
     for metric in logs[0].keys():
         metrics[metric] = sum([log[metric] for log in logs])/len(logs)
@@ -256,7 +225,7 @@ if __name__=="__main__":
     # 读取4个数据集
     setup_seed(20)
     args = set_config()
-    with open('./config/hypergraph_ce_v2.yml','r', encoding='utf-8') as f:
+    with open('./config/hyper_graph_cl.yml','r', encoding='utf-8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         baseConfig = config['baseConfig']
         modelConfig = config[args.configName]
@@ -306,21 +275,33 @@ if __name__=="__main__":
 
     hyperConfig.gamma = modelConfig['gamma']
     n_node = graph_info['base_node_num']
-    help_data = None
+
+    tr_p, va_p, te_p,train_neg ,ec_label ,ko_label,cc_data ,c_num,e_num= load_interaction_data()
+    ec_label = torch.LongTensor(ec_label)
+    rpairs_pos = torch.LongTensor(cc_data)
+    enzyme_ko = torch.LongTensor(ko_label)
+
+    ec_label = ec_label.cuda()
+    rpairs_pos = rpairs_pos.cuda()
+    enzyme_ko = enzyme_ko.cuda()
+
+    help_data = {
+        "ec_label": ec_label,
+        "rpairs_pos": rpairs_pos,
+        "enzyme_ko": enzyme_ko
+    }
+
 
     model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info)
     model.node_emb = node_emb
     if cuda:
         model = model.cuda()
-       
+
     optimizer = torch.optim.Adam([
         {
             'params':filter(lambda p: p.requires_grad, model.parameters())
         },
-        # {
-        #     'params':node_emb.weight,
-        # },
-        ], lr=lr,
+        ], lr=lr
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))
@@ -329,8 +310,6 @@ if __name__=="__main__":
         logging.info('init: %s' % init_path)
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
         model.load_state_dict(checkpoint['model_state_dict'],strict=False)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        lr = optimizer.state_dict()['param_groups'][0]['lr']
         init_step = checkpoint['step']
 
     logging.info('Model: %s' % modelConfig['name'])
@@ -369,15 +348,15 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0 :
+            if step % test_step == 0:
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
-                # metrics = test_inductive(model,valid_sampler)
-                metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
+                metrics = test_inductive(model,valid_sampler)
+                # metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
-                logset.log_metrics('Valid ', step, metrics)
+                logset.log_metrics('Valid ',step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in train_iter:
                 log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,sampler=sampler,help_data=help_data)
@@ -398,10 +377,12 @@ if __name__=="__main__":
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
-        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
+        # metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
-       
+
     else:
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
-        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info, train_info,modelConfig)
+        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
+       

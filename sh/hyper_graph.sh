@@ -320,13 +320,33 @@ CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v4.py --train --configName cl
 
 
 CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_baseline --save_path ./models/cl_v3_0221_baseline &
-CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_baseline --save_path ./models/cl_v3_0221_baseline_01 &
+
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_baseline --save_path ./models/cl_v3_0221_baseline_01 &
 
 
-CUDA_VISIBLE_DEVICES=4 python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/cl_v3_equation_predicat_01
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_ce_v3.py --train --configName cl_0221_best --save_path ./models/cl_v3_equation_predicat_01 &
 
 
 
 CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v3.py --train --configName cl_03_06 --save_path ./models/ce_data_v3_0305_clweight_1 &
 CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_ce_v3.py --train --configName cl_03_05 --save_path ./models/ce_data_v3_0305_clweight_2 &
 CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v3.py --train --configName cl_03_04 --save_path ./models/ce_data_v3_0305_clweight_3 &
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_ce_v5.py --train --configName cl_0221_best --save_path ./models/ce_data_v5_0307_1 &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_ce_v5.py --train --configName cl_03_01 --save_path ./models/ce_data_v5_0307_2 &
+
+
+
+
+CUDA_VISIBLE_DEVICES=7 python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/bkms_single_v4_mix_score_0308_1
+
+
+CUDA_VISIBLE_DEVICES=7 python hyper_graph_ce_v4.py --train --configName cl_0221_02 --save_path ./models/bkms_single_v4_filter_simple_score_1
+
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_ce_v4.py  --configName cl_0221_02 --save_path ./models/bkms_single_v4_filter_simple_score_1 --init /home/skl/yl/ce_project/relation_cl/models/models/bkms_single_v4_filter_simple_score_1/hit10/ &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v3.py  --configName cl_0221_best --save_path ./models/bkms_v3_filter_simple_score_1 --init /home/skl/yl/ce_project/relation_cl/models/models/bkms_v3_filter_simple_score_1/hit10/ &
+
+# cl_weight = 0
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_best --save_path ./models/bkms_v3_filter_simple_score_2 --init /home/skl/yl/ce_project/relation_cl/models/models/bkms_v3_filter_simple_score_2/hit10/ &
+

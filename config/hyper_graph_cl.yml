@@ -19,7 +19,7 @@ cl_0221_best:
   n_size: 20
   test_step: 50
   reg_weight: 0.1
-  cl_weight: 0.00001
+  cl_weight: 0.00000
   margin: 0.2
   dropout: 0.8
   cl_temp: 1.0

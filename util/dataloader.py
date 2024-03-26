@@ -12,905 +12,341 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 import os
 
-
-class OgOne2OneDataset(Dataset):
-    def __init__(self, dp, nentity, nrelation, n_size=100,Datatype='Conf',pos_rat=1):
-        self.nentity = nentity
-        self.nrelation = nrelation
-        self.Datatype = Datatype
-        # 假设数据集都能够看到全部的
-        if Datatype == 'Conf':
-            self.pos_conf_triples,self.pos_sys_triples,self.pos_trans_triples = dp.getConSetData()
-            trans_num =  int(pos_rat*len(self.pos_trans_triples))
-            self.triples = self.pos_trans_triples[:trans_num] + self.pos_sys_triples
-            self.triple_set = set(dp.trained)
-            self.true_value = self.get_true_tails(-1,n_size+1)
-        elif Datatype == 'Func':
-            self.vio_triples, self.asy_triples,self.functional_triples = dp.getVioData()
-            self.triples = self.functional_triples 
-            self.triple_set = set(dp.trained)
-            self.fun_rel_id = set(dp.fun_rel_idset)
-            self.true_value = self.get_true_tails(-1.2,n_size+1)
-        elif Datatype == 'Asy':
-            self.vio_triples, self.asy_triples,self.functional_triples = dp.getVioData()
-            self.triple_set = set(dp.trained)
-            self.triples =self.asy_triples
-            self.true_value = self.get_true_tails(-1.2,2)
-        else:
-            raise ValueError('Do not support thie data type Value: %s' % Datatype)
-     
-        self.n_size = n_size
-        self.pofHead = OgOne2OneDataset.count_relation_frequency(self.triple_set,0,nrelation)
-        self.true_head, self.true_tail = self.get_true_head_and_tail(self.triple_set)
-        self.head_num = self.tail_num = nentity
-        
-    def __len__(self):
-        return len(self.triples)
-        
-    def get_true_tails(self,init_value, size):
-        true_value =  torch.zeros(size) 
-        nn.init.constant_(true_value, init_value)
-        true_value[0] = 1
-        return true_value 
-
-    def asysItem(self, idx):
-        head,relation,tail =self.triples[idx]
-        samples_h =torch.LongTensor( [head, tail])
-        samples_t = torch.LongTensor([tail, head])
-        samples_r = torch.LongTensor([relation,relation])
-        shuffle_idx = torch.randperm(samples_h.nelement())
-        return samples_h[shuffle_idx],samples_r[shuffle_idx], samples_t[shuffle_idx], self.true_value[shuffle_idx]
-        
-
-    def confAndFuncationalItem(self, idx):
-        head,relation,tail =self.triples[idx]
-        # samples = torch.zeros(self.n_size+1, 3,dtype=torch.long)
-        sample_r = torch.LongTensor([relation]).expand(self.n_size+1)
-        pr = self.pofHead[relation]
-        rand_value = np.random.randint(np.iinfo(np.int32).max) % 1000
-        
-        if rand_value > pr:
-            sample_h = torch.LongTensor([head]).expand(self.n_size+1)
-            n_list = [[tail]]
-        else:
-            sample_t = torch.LongTensor([tail]).expand(self.n_size+1)
-            n_list = [[head]]
-        n_size = 0
-        replace_index = 0
-        while n_size < self.n_size:
-            rdm_words = np.random.randint(0, self.nentity, self.n_size*2)
-            if rand_value > pr:
-                mask = np.in1d(
-                    rdm_words, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else: # 如果小于则替换头实体
-                mask = np.in1d(
-                    rdm_words, 
-                    self.true_head[(relation, tail)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            rdm_words = rdm_words[mask] # filter true triples
-            n_list.append(rdm_words)
-            n_size += rdm_words.size
-        
-        negative_sample = np.concatenate(n_list)[:self.n_size+1]
-
-        if rand_value > pr:
-            sample_t =  torch.LongTensor(negative_sample)
-        else:
-            sample_h = torch.LongTensor(negative_sample)
-
-        shuffle_idx = torch.randperm(sample_h.nelement())
-
-        return sample_h[shuffle_idx],sample_r[shuffle_idx], sample_t[shuffle_idx], self.true_value[shuffle_idx]
-    
-    def __getitem__(self, idx):
-        if self.Datatype != 'Asy':
-            return self.confAndFuncationalItem(idx)
-        return self.asysItem(idx)
-    
-    @staticmethod
-    def collate_fn(data):
-        h = torch.stack([_[0] for _ in data], dim=0)
-        r = torch.stack([_[1] for _ in data], dim=0)
-        t = torch.stack([_[2] for _ in data], dim=0)
-        value = torch.stack([_[3] for _ in data], dim=0)
-        return h,r,t, value
-    @staticmethod
-    def count_relation_frequency(triples,rel_id_begin, nrelation):
-        '''
-        Get frequency of a partial triple like (head, relation) or (relation, tail)
-        The frequency will be used for subsampling like word2vec
-        '''
-        tr2h = {}
-
-        hr2t = {}
-        for head, relation, tail in triples:
-            if relation not in tr2h.keys():
-                tr2h[relation] = {}
-            if relation not in hr2t.keys():
-                hr2t[relation] = {}
-                
-            
-            if head not in hr2t[relation].keys():
-                hr2t[relation][head] = 1
-            else:
-                hr2t[relation][head] += 1
-
-            if tail not in tr2h[relation].keys():
-                tr2h[relation][tail] = 1
-            else:
-                tr2h[relation][tail] += 1
-        
-        hrpt = {}  # 记录关系中每个头实体的平均尾实体数量
-        trph = {}  # 记录关系中每个尾实体的平均头实体数量
-        pofHead = {}
-        for rid in range(rel_id_begin,nrelation+rel_id_begin):  
-            t_total =np.sum([hr2t[rid][key] for key in hr2t[rid].keys()])
-            h_total = len(list(hr2t[rid].keys()))
-            hrpt[rid] = float(t_total)/h_total
-
-            right_count =np.sum([tr2h[rid][key] for key in tr2h[rid].keys() ])
-            left_count = len(list(tr2h[rid].keys()))
-            trph[rid] = float(right_count)/left_count
-            pofHead[rid] = 1000* hrpt[rid]/(hrpt[rid]+trph[rid])
-           
-        return pofHead
-
-    @staticmethod
-    def get_true_head_and_tail(triples):
-        '''
-        Build a dictionary of true triples that will
-        be used to filter these true triples for negative sampling
-        '''
-        
-        true_head = {}
-        true_tail = {}
-
-        for head, relation, tail in triples:
-            if (head, relation) not in true_tail:
-                true_tail[(head, relation)] = []
-            true_tail[(head, relation)].append(tail)
-            if (relation, tail) not in true_head:
-                true_head[(relation, tail)] = []
-            true_head[(relation, tail)].append(head)
-
-        for relation, tail in true_head:
-            true_head[(relation, tail)] = np.array(list(set(true_head[(relation, tail)])))
-        for head, relation in true_tail:
-            true_tail[(head, relation)] = np.array(list(set(true_tail[(head, relation)])))                 
-
-        return true_head, true_tail
-
-class NewOne2OneDataset(Dataset):
-    def __init__(self, triples, nentity, nrelation, init_value=-1,n_size=100, random=True):
-        self.nentity = nentity
-        self.nrelation = nrelation
-        self.triples = triples
-        self.init_value = init_value
-        self.triple_set = set(triples)
-        self.n_size = n_size
-        self.random = random
-        self.pofHead = NewOne2OneDataset.count_relation_frequency(self.triple_set,nentity,nrelation)
-        self.true_head, self.true_tail = self.get_true_head_and_tail(self.triple_set)
-        self.head_num = self.tail_num = nentity
-        self.true_value = self.get_true_tails()
-   
-    def __len__(self):
-        return len(self.triples)
-        
-    def get_true_tails(self):
-        true_value =  torch.zeros(self.n_size+1) 
-        nn.init.constant_(true_value, self.init_value)
-        true_value[0] = 1
-        return true_value 
-
-    def __getitem__(self, idx):
-        head,relation,tail =self.triples[idx]
-        # samples = torch.zeros(self.n_size+1, 3,dtype=torch.long)
-        sample_r = torch.LongTensor([relation]).expand(self.n_size+1)
-        pr = self.pofHead[relation]
-        rand_value = np.random.randint(np.iinfo(np.int32).max) % 1000
-        
-        if rand_value > pr:
-            sample_h = torch.LongTensor([head]).expand(self.n_size+1)
-            n_list = [[tail]]
-        else:
-            sample_t = torch.LongTensor([tail]).expand(self.n_size+1)
-            n_list = [[head]]
-        n_size = 0
-        replace_index = 0
-        while n_size < self.n_size:
-            rdm_words = np.random.randint(0, self.nentity, self.n_size*2)
-            if rand_value > pr:
-                mask = np.in1d(
-                    rdm_words, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else: # 如果小于则替换头实体
-                mask = np.in1d(
-                    rdm_words, 
-                    self.true_head[(relation, tail)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            rdm_words = rdm_words[mask] # filter true triples
-            n_list.append(rdm_words)
-            n_size += rdm_words.size
-        
-        negative_sample = np.concatenate(n_list)[:self.n_size+1]
-
-        if rand_value > pr:
-            sample_t =  torch.LongTensor(negative_sample)
-        else:
-            sample_h = torch.LongTensor(negative_sample)
-
-        if self.random:
-            shuffle_idx = torch.randperm(sample_h.nelement())
-            return sample_h[shuffle_idx],sample_r[shuffle_idx], sample_t[shuffle_idx], self.true_value[shuffle_idx]
-        else:
-            return sample_h ,sample_r, sample_t, self.true_value
-    
-    @staticmethod
-    def collate_fn(data):
-        h = torch.stack([_[0] for _ in data], dim=0)
-        r = torch.stack([_[1] for _ in data], dim=0)
-        t = torch.stack([_[2] for _ in data], dim=0)
-        value = torch.stack([_[3] for _ in data], dim=0)
-        return h,r,t, value
-
-    @staticmethod
-    def count_relation_frequency(triples, rel_id_begin,nrelation):
-        '''
-        Get frequency of a partial triple like (head, relation) or (relation, tail)
-        The frequency will be used for subsampling like word2vec
-        '''
-        tr2h = {}
-
-        hr2t = {}
-        for head, relation, tail in triples:
-            if relation not in tr2h.keys():
-                tr2h[relation] = {}
-            if relation not in hr2t.keys():
-                hr2t[relation] = {}
-                
-            
-            if head not in hr2t[relation].keys():
-                hr2t[relation][head] = 1
-            else:
-                hr2t[relation][head] += 1
-
-            if tail not in tr2h[relation].keys():
-                tr2h[relation][tail] = 1
-            else:
-                tr2h[relation][tail] += 1
-        
-        hrpt = {}  # 记录关系中每个头实体的平均尾实体数量
-        trph = {}  # 记录关系中每个尾实体的平均头实体数量
-        pofHead = {}
-        for rid in range(rel_id_begin,nrelation+rel_id_begin):  
-            t_total =np.sum([hr2t[rid][key] for key in hr2t[rid].keys()])
-            h_total = len(list(hr2t[rid].keys()))
-            hrpt[rid] = float(t_total)/h_total
-
-            right_count =np.sum([tr2h[rid][key] for key in tr2h[rid].keys() ])
-            left_count = len(list(tr2h[rid].keys()))
-            trph[rid] = float(right_count)/left_count
-            pofHead[rid] = 1000* hrpt[rid]/(hrpt[rid]+trph[rid])
-           
-        return pofHead
-
-    @staticmethod
-    def get_true_head_and_tail(triples):
-        '''
-        Build a dictionary of true triples that will
-        be used to filter these true triples for negative sampling
-        '''
-        
-        true_head = {}
-        true_tail = {}
-
-        for head, relation, tail in triples:
-            if (head, relation) not in true_tail:
-                true_tail[(head, relation)] = []
-            true_tail[(head, relation)].append(tail)
-            if (relation, tail) not in true_head:
-                true_head[(relation, tail)] = []
-            true_head[(relation, tail)].append(head)
-
-        for relation, tail in true_head:
-            true_head[(relation, tail)] = np.array(list(set(true_head[(relation, tail)])))
-        for head, relation in true_tail:
-            true_tail[(head, relation)] = np.array(list(set(true_tail[(head, relation)])))                 
-
-        return true_head, true_tail
-
-class OGOneToOneTestDataset(Dataset):
-    def __init__(self, triples, all_true_triples,nentity, nrelation, mode='hr_t'):
-        self.nentity = nentity
-        self.nrelation = nrelation
-        self.triples = triples
+class TestReactionRelationDataset(Dataset):
+    def __init__(self, triples, all_true_triples, nentity, nrelation):
+        self.len = len(triples)
         self.triple_set = set(all_true_triples)
-        self.mode = mode
-
-        if mode == 'hr_t':
-            self.replace_index = 2
-        elif mode == 'h_rt':
-            self.replace_index = 0
-
-    def __len__(self):
-        return len(self.triples)
-        
-
-    def __getitem__(self, idx):
-        head,relation,tail =self.triples[idx]
-        samples = torch.zeros(self.nentity, 3,dtype=torch.long)
-        samples = samples + torch.LongTensor((self.triples[idx])) 
-        if self.mode == 'h_rt':
-            tmp = [(0, rand_head) if (rand_head, relation, tail) not in self.triple_set
-                   else (-1, head) for rand_head in range(self.nentity)]
-          
-            tmp[head] = (0, head)
-        elif self.mode == 'hr_t':
-            tmp = [(0, rand_tail) if (head, relation, rand_tail) not in self.triple_set
-                   else (-1, tail) for rand_tail in range(self.nentity)]
-            tmp[tail] = (0, tail)
-
-        tmp  = torch.LongTensor(tmp)
-        samples[...,self.replace_index] = tmp[...,1]
-        filter_bias = tmp[...,0].float()
-        postive_sampe = torch.LongTensor(self.triples[idx])
-        return postive_sampe,samples,filter_bias,self.mode
-
-    @staticmethod
-    def collate_fn(data):
-        positive = torch.stack([_[0] for _ in data], dim=0)
-        samples = torch.stack([_[1] for _ in data], dim=0)
-        filter_bias = torch.stack([_[2] for _ in data], dim=0)
-        mode = data[0][3]
-        return positive, samples, filter_bias, mode
-
-# 暂时用于ConvKB：h,r,t 的shape 应该是相同的
-class OGOneToOneDataset(Dataset):
-    def __init__(self, triples, nentity, nrelation, mode='hr_t',init_value=-1,n_size=100):
-        self.nentity = nentity
-        self.nrelation = nrelation
         self.triples = triples
-        self.init_value = init_value
-        self.triple_set = set(triples)
-        self.mode = mode
-        self.n_size = n_size
-        self.count = self.count_frequency(self.triple_set)
-        self.true_head, self.true_tail = self.get_true_head_and_tail(self.triple_set)
-        self.head_num = self.tail_num = nentity
-        if mode == 'hr_t':
-            self.replace_index = 2
-        elif mode == 'h_rt':
-            self.replace_index = 0
-   
-    def __len__(self):
-        return len(self.triples)
-        
-    def get_true_tails(self):
-        true_value =  torch.zeros(self.n_size+1) 
-        nn.init.constant_(true_value, self.init_value)
-        true_value[0] = 1
-        return true_value #,value
-
-    def __getitem__(self, idx):
-        head,relation,tail =self.triples[idx]
-        subsampling_weight = self.count[(head, relation)] + self.count[(tail, -relation-1)]
-        subsampling_weight = torch.sqrt(1 / torch.Tensor([subsampling_weight]))  
-        negative_sample_size=0
-        negative_sample_list=[]
-
-        samples = torch.zeros(self.n_size+1, 3,dtype=torch.long)
-        samples = samples + torch.LongTensor((self.triples[idx]))
-        while negative_sample_size < self.n_size:
-            
-            if self.mode == 'h_rt':
-                negative_sample = np.random.randint(self.head_num, size=self.n_size*2)
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_head[(relation, tail)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            elif self.mode == 'hr_t':
-                negative_sample = np.random.randint(self.tail_num, size=self.n_size*2)
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else:
-                raise ValueError('Training batch mode %s not supported' % self.mode)
-            
-            negative_sample = negative_sample[mask] # filter true triples
-            negative_sample_list.append(negative_sample)
-            negative_sample_size += negative_sample.size
-
-        negative_sample = np.concatenate(negative_sample_list)[:self.n_size]
-       
-        samples[1:,self.replace_index] =torch.LongTensor(negative_sample) 
-        value = self.get_true_tails()
-        return samples, value, subsampling_weight, self.mode
-
-    
-    @staticmethod
-    def collate_fn(data):
-        samples = torch.stack([_[0] for _ in data], dim=0)
-        value = torch.stack([_[1] for _ in data], dim=0)
-        subsample_weight = torch.stack([_[2] for _ in data], dim=0)
-        mode = data[0][3]
-        return samples, value, subsample_weight, mode
-    @staticmethod
-    def count_frequency(triples, start=4):
-        '''
-        Get frequency of a partial triple like (head, relation) or (relation, tail)
-        The frequency will be used for subsampling like word2vec
-        '''
-        count = {}
-        for head, relation, tail in triples:
-            if (head, relation) not in count:
-                count[(head, relation)] = start
-            else:
-                count[(head, relation)] += 1
-
-            if (tail, -relation-1) not in count:
-                count[(tail, -relation-1)] = start
-            else:
-                count[(tail, -relation-1)] += 1
-        return count
-    
-    @staticmethod
-    def get_true_head_and_tail(triples):
-        '''
-        Build a dictionary of true triples that will
-        be used to filter these true triples for negative sampling
-        '''
-        
-        true_head = {}
-        true_tail = {}
-
-        for head, relation, tail in triples:
-            if (head, relation) not in true_tail:
-                true_tail[(head, relation)] = []
-            true_tail[(head, relation)].append(tail)
-            if (relation, tail) not in true_head:
-                true_head[(relation, tail)] = []
-            true_head[(relation, tail)].append(head)
-
-        for relation, tail in true_head:
-            true_head[(relation, tail)] = np.array(list(set(true_head[(relation, tail)])))
-        for head, relation in true_tail:
-            true_tail[(head, relation)] = np.array(list(set(true_tail[(head, relation)])))                 
-
-        return true_head, true_tail
-
-class OGNagativeSampleDataset(Dataset):
-    def __init__(self, dp,all_trained_triple, nentity, nrelation, negative_sample_size, mode,pos_rat=1,Datatype='Conf',head_num=None,tail_num=None):
-        # 假设数据集都能够看到全部的
-        if Datatype == 'Conf':
-            self.pos_conf_triples,self.pos_sys_triples,self.pos_trans_triples = dp.getConSetData()
-            trans_num =  int(pos_rat*len(self.pos_trans_triples))
-            self.triples = self.pos_trans_triples[:trans_num] + self.pos_sys_triples
-            self.triple_set = set(all_trained_triple)
-        elif Datatype == 'Func':
-            self.vio_triples, self.asy_triples,self.functional_triples = dp.getVioData()
-            self.triples = self.functional_triples 
-            self.triple_set = all_trained_triple
-            self.fun_rel_id = set(dp.fun_rel_idset)
-        elif Datatype == 'Asy':
-            self.vio_triples, self.asy_triples,self.functional_triples = dp.getVioData()
-            self.triple_set = all_trained_triple
-            self.triples =self.asy_triples
-        else:
-            raise ValueError('Do not support thie data type Value: %s' % Datatype)
-
-        self.dataType = Datatype
-        self.len = len(self.triples)
-
         self.nentity = nentity
         self.nrelation = nrelation
-
-        self.negative_sample_size = negative_sample_size
-        self.mode = mode
-
-        self.count = self.count_frequency(self.triple_set)
-        self.true_head, self.true_tail = self.get_true_head_and_tail(self.triple_set)
-
-        if not head_num is None and not tail_num is None:
-            self.head_num = head_num
-            self.tail_num = tail_num
-        elif head_num is None and tail_num is None:
-            self.head_num = self.tail_num = self.nentity
-        else:
-            print("ERROR")
+    
 
     def __len__(self):
         return self.len
     
-    def getItem_conf(self,idx):
-        positive_sample = self.triples[idx]
-        head, relation, tail = positive_sample
-        subsampling_weight = self.count[(head, relation)] + self.count[(tail, -relation-1)]
-        subsampling_weight = torch.sqrt(1 / torch.Tensor([subsampling_weight]))
-        
-        negative_sample_list = []
-        negative_sample_size = 0
-
-        while negative_sample_size < self.negative_sample_size:
-            
-            if self.mode == 'h_rt':
-                negative_sample = np.random.randint(self.head_num, size=self.negative_sample_size*2)
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_head[(relation, tail)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            elif self.mode == 'hr_t':
-                negative_sample = np.random.randint(self.tail_num, size=self.negative_sample_size*2)
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else:
-                raise ValueError('Training batch mode %s not supported' % self.mode)
-            
-            negative_sample = negative_sample[mask] # filter true triples
-            negative_sample_list.append(negative_sample)
-            negative_sample_size += negative_sample.size
-
-        negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
-        negative_sample = torch.LongTensor(negative_sample)
-        positive_sample = torch.LongTensor(positive_sample)
-
-        return positive_sample, negative_sample, subsampling_weight, self.mode
-
-    def getItemVio(self, idx):
-
-        positive_sample = self.triples[idx]
-        head, relation, tail = positive_sample
-
-        subsampling_weight = self.count[(head, relation)] + self.count[(tail, -relation-1)]
-        subsampling_weight = torch.sqrt(1 / torch.Tensor([subsampling_weight]))
-        negative_sample = [tail,relation,head]
-        negative_sample = torch.LongTensor(negative_sample)
-        positive_sample = torch.LongTensor(positive_sample)
-        return positive_sample, negative_sample, subsampling_weight, self.mode       
-
     def __getitem__(self, idx):
-        if self.dataType  != 'Asy':
-            return self.getItem_conf(idx)
-        else:
-            return self.getItemVio(idx)
+        head, tail, relation = self.triples[idx]
+
+        tmp = [(0, rand_r) if (head, tail, rand_r) not in self.triple_set
+                   else (-1, relation) for rand_r in range(self.nrelation)]
+        
+        tmp[relation] = (0, relation)
+            
+        tmp = torch.LongTensor(tmp)            
+        filter_bias = tmp[:, 0].float()
+        negative_sample = tmp[:, 1]
+        head = torch.LongTensor(head)
+        tail = torch.LongTensor(tail)
+        relation = torch.LongTensor([relation])
+
+        return head, tail, relation, negative_sample, filter_bias
     
     @staticmethod
     def collate_fn(data):
-        positive_sample = torch.stack([_[0] for _ in data], dim=0)
-        negative_sample = torch.stack([_[1] for _ in data], dim=0)
-        subsample_weight = torch.cat([_[2] for _ in data], dim=0)
-        mode = data[0][3]
-        return positive_sample, negative_sample, subsample_weight, mode
-    
-    @staticmethod
-    def count_frequency(triples, start=4):
-        '''
-        Get frequency of a partial triple like (head, relation) or (relation, tail)
-        The frequency will be used for subsampling like word2vec
-        '''
-        count = {}
-        for head, relation, tail in triples:
-            if (head, relation) not in count:
-                count[(head, relation)] = start
-            else:
-                count[(head, relation)] += 1
+        head_list = [_[0] for _ in data]
+        head = torch.cat(head_list)
+        tail_list = [_[1] for _ in data]
+        tail = torch.cat(tail_list)
 
-            if (tail, -relation-1) not in count:
-                count[(tail, -relation-1)] = start
-            else:
-                count[(tail, -relation-1)] += 1
-        return count
-    
-    @staticmethod
-    def get_true_head_and_tail(triples):
-        '''
-        Build a dictionary of true triples that will
-        be used to filter these true triples for negative sampling
-        '''
-        
-        true_head = {}
-        true_tail = {}
+        head_index = []
+        for i, tensor in enumerate(head_list):
+            head_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        head_index = torch.cat(head_index,dim=0)
 
-        for head, relation, tail in triples:
-            if (head, relation) not in true_tail:
-                true_tail[(head, relation)] = []
-            true_tail[(head, relation)].append(tail)
-            if (relation, tail) not in true_head:
-                true_head[(relation, tail)] = []
-            true_head[(relation, tail)].append(head)
+        tail_index = []
+        for i, tensor in enumerate(tail_list):
+            tail_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        tail_index = torch.cat(tail_index,dim=0)
 
-        for relation, tail in true_head:
-            true_head[(relation, tail)] = np.array(list(set(true_head[(relation, tail)])))
-        for head, relation in true_tail:
-            true_tail[(head, relation)] = np.array(list(set(true_tail[(head, relation)])))                 
+        relation = torch.stack([_[2] for _ in data], dim=0)
+        negative_sample = torch.stack([_[3] for _ in data], dim=0)
+        filter_bias = torch.stack([_[2] for _ in data], dim=0)
+        return head, tail, relation, negative_sample, filter_bias, head_index, tail_index
 
-        return true_head, true_tail
+class NagativeReactionRelationSampleDataset(Dataset):
+    def __init__(self, triples, nentity, nrelation, negative_sample_size,):
 
-class NagativeSampleNewDataset(Dataset):
-
-    def splitByTypeDiff(self,typeDiff):
-        resultDicts = []
-        thread1 = 0.1
-        thread2 = 0.6
-        for i in range(len(typeDiff)):
-            typeDict = {"small":[],"middle":[],"big":[]}
-            for j in range(len(typeDiff[0])):
-                if typeDiff[i][j] <= thread1:
-                    typeDict['small'].append(j)
-                elif typeDiff[i][j] >= thread2:
-                    typeDict['big'].append(j)
-                else:
-                    typeDict['middle'].append(j)
-            typeDict['small'] = np.array(typeDict['small'])
-            typeDict['big'] = np.array(typeDict['big'])
-            typeDict['middle'] = np.array(typeDict['middle'])
-            resultDicts.append(typeDict)
-        return resultDicts
-    
-    def read_type2entity(self):
-        file = "/home/skl/yl/data/YAGO3-1668k/yago_insnet/type2entity.txt"
-        type2Eids = []
-        with open(file, 'r',encoding='utf-8') as fin:
-            data = fin.readlines()
-            for line in data:
-                eids = line.strip().split('\t')
-                type2Eids.append(list(map(int,eids)))
-        return np.array(type2Eids,dtype=object)
-
-
-    def buildType2entity(self):
-        type2Eids = self.read_type2entity()
-        resultDicts = self.splitByTypeDiff(self.typeDiff)
-        splitType2eid = []
-        for typeInfo in resultDicts:
-            small = typeInfo['small']
-            middle = typeInfo['middle']
-            big = typeInfo['big']
-
-            if len(small) > 0:
-                small_type = type2Eids[small]
-            else:
-                small_type = np.array([[]])
-            if len(middle) > 0:
-                middle_type = type2Eids[middle]
-            else:
-                middle_type = np.array([[]])
-            if len(big) > 0:
-                big_type = type2Eids[big]
-            else:
-                big_type = np.array([[]])
-            
-            small_type = np.concatenate(small_type)
-            middle_type = np.concatenate(middle_type)
-            big_type = np.concatenate(big_type)
-            splitType = {
-                'small':small_type,
-                'middle':middle_type,
-                'big':big_type
-            }
-            splitType2eid.append(splitType)
-        return splitType2eid
-    
-    def getitem_byType(self,idx):
-
-        positive_sample = self.triples[idx]
-        head, relation, tail = positive_sample
-        subsampling_weight = self.count[(head, relation)] + self.count[(tail, -relation-1)]
-        subsampling_weight = torch.sqrt(1 / torch.Tensor([subsampling_weight]))
-
-        negative_sample_list = []
-        negative_sample_size = 0
-
-        if self.mode =='h_rt':
-            true_type_id = self.en2typeid[head]
-        elif self.mode =='hr_t':
-            true_type_id = self.en2typeid[tail]
-        
-        splitType = self.splitType2eid[true_type_id]
-
-
-        small_type = splitType['small']
-        middle_type = splitType['middle']
-        big_type = splitType['big']
-        samll_flag = True
-        while negative_sample_size < self.negative_sample_size:
-            if samll_flag:
-                result = []
-                if len(small_type) > 0:
-                    samll = small_type[np.random.randint(len(small_type), size=self.small_size)].astype(
-                        np.int64)
-                    result.append(samll)
-                if len(middle_type) > 0:
-                    middle = middle_type[np.random.randint(len(middle_type), size=self.middle_size)].astype(
-                        np.int64)
-                    result.append(middle)
-                if len(big_type) > 0:
-                    big = big_type[np.random.randint(len(big_type), size=self.big_size)].astype(
-                        np.int64)
-                    result.append(big)
-                negative_sample =  np.concatenate(result)
-            else:
-                negative_sample = np.random.randint(self.nentity, size=self.negative_sample_size*2)
-            
-            if self.mode == 'h_rt':
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_head[(relation, tail)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            elif self.mode == 'hr_t':
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else:
-                raise ValueError('Training batch mode %s not supported' % self.mode)
-            
-            negative_sample = negative_sample[mask] # filter true triples
-            negative_sample_list.append(negative_sample)
-            negative_sample_size += negative_sample.size
-            if  samll_flag :
-                samll_flag = False
-        negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
-        negative_sample = torch.LongTensor(negative_sample)
-        positive_sample = torch.LongTensor(positive_sample)
-        return positive_sample, negative_sample, subsampling_weight, self.mode
-
-
-    # 类语义信息：disjoint 信息
-    def __init__(self, triples, nentity, nrelation, negative_sample_size, mode, entity2type=None, typeDiff=None,en2typeid=None):
         self.len = len(triples)
         self.triples = triples
         self.triple_set = (triples)
+
         self.nentity = nentity
-        self.type = "Disjoint"
-        self.type = "TypeSub"
-
-        self.small_size = int(negative_sample_size*0.1)
-        self.middle_size = int( negative_sample_size*0.7)
-        self.big_size = int(negative_sample_size*0.2)
-
-        # 初始化entity2type
-        if  entity2type != None:
-            self.entity2tye = [i for i in range(nentity)]
-            typeid = 0
-            for type in entity2type.keys():
-                for index in entity2type[type]:
-                    self.entity2tye[index] = typeid
-                typeid += 1
-            self.entity2tye = np.array(self.entity2tye)
-        
-        
-        self.en2typeid = np.array(en2typeid)
-        self.typeDiff =np.array(typeDiff)
-
-        # self.splitType2eid = self.buildType2entity()
         self.nrelation = nrelation
         self.negative_sample_size = negative_sample_size
-        self.mode = mode
-        self.count = self.count_frequency(triples)
-        self.true_head, self.true_tail = self.get_true_head_and_tail(self.triples)
+        self.true_realtion = self.get_true_head_and_tail(self.triple_set)
 
     def __len__(self):
         return self.len
-
-    def getitem_with_weight(self, idx):
+    
+    def __getitem__(self, idx):
         positive_sample = self.triples[idx]
-        head, relation, tail = positive_sample
-        subsampling_weight = self.count[(head, relation)] + self.count[(tail, -relation-1)]
-        subsampling_weight = torch.sqrt(1 / torch.Tensor([subsampling_weight]))
+        head, tail, relation = positive_sample
         
         negative_sample_list = []
         negative_sample_size = 0
-        nagative_weight_list = []
-
-        if self.mode =='h_rt':
-            true_type = self.entity2tye[head]
-            true_type_id = self.en2typeid[head]
-        elif self.mode =='hr_t':
-            true_type = self.entity2tye[tail]
-            true_type_id = self.en2typeid[tail]
 
         while negative_sample_size < self.negative_sample_size:
-            negative_sample = np.random.randint(self.nentity, size=self.negative_sample_size*2)
-            
-            if self.mode == 'h_rt':
-                mask = np.in1d(
+            negative_sample = np.random.randint(0, self.nrelation,size=self.negative_sample_size*2)
+            mask = np.in1d(
                     negative_sample, 
-                    self.true_head[(relation, tail)], 
+                    self.true_realtion[(head, tail)], 
                     assume_unique=True, 
                     invert=True
-                )
-            elif self.mode == 'hr_t':
-                mask = np.in1d(
-                    negative_sample, 
-                    self.true_tail[(head, relation)], 
-                    assume_unique=True, 
-                    invert=True
-                )
-            else:
-                raise ValueError('Training batch mode %s not supported' % self.mode)
-            
+            )
             
             negative_sample = negative_sample[mask] # filter true triples
-
-            if self.type == 'Disjoint':
-                nagative_weight = [1 for i in range(len(negative_sample))] 
-                nagative_weight = np.array(nagative_weight)
-                typeids = self.entity2tye[negative_sample] != true_type
-                nagative_weight[typeids] = 10
-            else:
-                typeIds = self.en2typeid[negative_sample]
-                nagative_weight =  -(self.typeDiff[true_type_id][typeIds]-0.6)*2
-
-            nagative_weight_list.append(nagative_weight)
-
             negative_sample_list.append(negative_sample)
             negative_sample_size += negative_sample.size
 
         negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
-        nagative_weight = np.concatenate(nagative_weight_list)[:self.negative_sample_size]
         negative_sample = torch.LongTensor(negative_sample)
-        nagative_weight = torch.FloatTensor(nagative_weight)
-        positive_sample = torch.LongTensor(positive_sample)
-        return positive_sample, negative_sample, subsampling_weight, self.mode,nagative_weight
+        head = torch.LongTensor(head)
+        tail = torch.LongTensor(tail)
+        relation = torch.LongTensor([relation])
 
+        return head, tail, relation, negative_sample
+    
+    @staticmethod
+    def collate_fn(data):
+        # 
+        head_list = [_[0] for _ in data]
+        head = torch.cat(head_list)
+        tail_list = [_[1] for _ in data]
+        tail = torch.cat(tail_list)
+
+        head_index = []
+        for i, tensor in enumerate(head_list):
+            head_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        head_index = torch.cat(head_index,dim=0)
+
+        tail_index = []
+        for i, tensor in enumerate(tail_list):
+            tail_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        tail_index = torch.cat(tail_index,dim=0)
+
+        relation = torch.stack([_[2] for _ in data], dim=0)
+        negative_sample = torch.stack([_[3] for _ in data], dim=0)
+
+        return head,tail, relation, negative_sample, head_index, tail_index
+    
+    @staticmethod
+    def get_true_head_and_tail(triples):
+        '''
+        Build a dictionary of true triples that will
+        be used to filter these true triples for negative sampling
+        '''
+        true_relation = {}
+        for left, right, e in triples:
+            if (left, right) not in true_relation:
+                true_relation[(left, right)] = []
+            true_relation[(left, right)].append(e)
+        
+        for left, right in true_relation:
+            true_relation[(left, right)] = np.array(list(set(true_relation[(left, right)])))
+        
+        return true_relation
+
+class NagativeReactionSampleDataset(Dataset):
+    def __init__(self, triples, nentity, nrelation, negative_sample_size,mode):
+
+        self.len = len(triples)
+        self.triples = triples
+        self.triple_set = np.array(triples)
+
+        equa_set = set()
+        for left,right,e in triples:
+            equa_set.add(left)
+            equa_set.add(right)
+        self.equa_set = np.array(list(equa_set))
+        self.mode = mode
+
+        self.equa2id = {
+            self.equa_set[i]:i for i in range(len(self.equa_set))
+        }
+
+        self.nentity = nentity
+        self.nrelation = nrelation
+        self.negative_sample_size = negative_sample_size
+        self.true_realtion = self.get_true_head_and_tail(self.triple_set)
+
+    def __len__(self):
+        return self.len
+    
     def __getitem__(self, idx):
-        return self.getitem_with_weight(idx)
+        positive_sample = self.triples[idx]
+        head, tail, relation = positive_sample
+        
+        negative_sample_list = []
+        negative_sample_size = 0
+
+        while negative_sample_size < self.negative_sample_size:
+            negative_sample = np.random.randint(0, len(self.equa_set),size=self.negative_sample_size*2)
+            if self.mode == "hr_t":
+                mask = np.in1d(
+                        negative_sample, 
+                        [self.equa2id[tail]], 
+                        assume_unique=True, 
+                        invert=True
+                )
+            else:
+                mask = np.in1d(
+                        negative_sample, 
+                        [self.equa2id[head]], 
+                        assume_unique=True, 
+                        invert=True
+                )
+            negative_sample = negative_sample[mask] # filter true triples
+            negative_sample_list.append(negative_sample)
+            negative_sample_size += negative_sample.size
+        negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
+        
+        negative_sample = self.equa_set[negative_sample]
+
+        negative_sample_list = []
+        for negative in negative_sample:
+            negative_sample_list.append(torch.LongTensor(list(negative)))
+        
+        # negative_sample = torch.LongTensor(negative_sample)
+        head = torch.LongTensor(head)
+        tail = torch.LongTensor(tail)
+        relation = torch.LongTensor([relation])
+
+        return head, tail, relation, negative_sample_list,self.mode
+    
+    @staticmethod
+    def collate_fn(data):
+        # 
+        head_list = [_[0] for _ in data]
+        head = torch.cat(head_list)
+        tail_list = [_[1] for _ in data]
+        tail = torch.cat(tail_list)
+
+        head_index = []
+        for i, tensor in enumerate(head_list):
+            head_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        head_index = torch.cat(head_index,dim=0)
+
+        tail_index = []
+        for i, tensor in enumerate(tail_list):
+            tail_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        tail_index = torch.cat(tail_index,dim=0)
+
+        relation = torch.stack([_[2] for _ in data], dim=0)
+
+
+        negative_sample_list  = [_[3] for _ in data]
+        negative_sample_list = list(np.concatenate(negative_sample_list))
+    
+        negative_sample = torch.cat(list(negative_sample_list))
+        neg_index = []
+        for i, tensor in enumerate(negative_sample_list):
+            neg_index.append(torch.full((len(tensor),1), i, dtype=torch.long))
+        neg_index = torch.cat(neg_index,dim=0)
+
+        mode = data[0][4]
+        return head,tail, relation, negative_sample, head_index, tail_index,neg_index,mode
+    
+    @staticmethod
+    def get_true_head_and_tail(triples):
+        '''
+        Build a dictionary of true triples that will
+        be used to filter these true triples for negative sampling
+        '''
+        true_relation = {}
+        for left, right, e in triples:
+            if (left, right) not in true_relation:
+                true_relation[(left, right)] = []
+            true_relation[(left, right)].append(e)
+        
+        for left, right in true_relation:
+            true_relation[(left, right)] = np.array(list(set(true_relation[(left, right)])))
+        
+        return true_relation
+
+
+
+class TestRelationDataset(Dataset):
+    def __init__(self, triples, all_true_triples, nentity, nrelation):
+        self.len = len(triples)
+        self.triple_set = set(all_true_triples)
+        self.triples = triples
+        self.nentity = nentity
+        self.nrelation = nrelation
+    
+
+    def __len__(self):
+        return self.len
+    
+    def __getitem__(self, idx):
+        head, relation, tail = self.triples[idx]
+        tmp = [(0, rand_r) if (head, rand_r, tail) not in self.triple_set
+                   else (-1, relation) for rand_r in range(self.nrelation)]
+        
+        tmp[relation] = (0, relation)
+            
+        tmp = torch.LongTensor(tmp)            
+        filter_bias = tmp[:, 0].float()
+        negative_sample = tmp[:, 1]
+        positive_sample = torch.LongTensor((head, relation, tail))
+        return positive_sample, negative_sample, filter_bias
     
     @staticmethod
     def collate_fn(data):
         positive_sample = torch.stack([_[0] for _ in data], dim=0)
         negative_sample = torch.stack([_[1] for _ in data], dim=0)
-        subsample_weight = torch.cat([_[2] for _ in data], dim=0)
-        weight_list = torch.stack([_[4] for _ in data], dim=0)
-        mode = data[0][3]
-        return positive_sample, negative_sample, subsample_weight, mode ,weight_list
-        # return positive_sample, negative_sample, subsample_weight, mode  # ,weight_list
+        filter_bias = torch.stack([_[2] for _ in data], dim=0)
+        return positive_sample, negative_sample, filter_bias
+
+
+class NagativeRelationSampleDataset(Dataset):
+    def __init__(self, triples, nentity, nrelation, negative_sample_size, mode=None,head_num=None,tail_num=None,all_traied=None):
+
+        self.len = len(triples)
+        self.triples = triples
+        if all_traied != None:
+            self.triple_set = (all_traied)
+        else:
+            self.triple_set = (triples)
+
+        self.nentity = nentity
+        self.nrelation = nrelation
+        self.negative_sample_size = negative_sample_size
+        self.true_realtion = self.get_true_head_and_tail(self.triple_set)
+
+    def __len__(self):
+        return self.len
+    
+    def __getitem__(self, idx):
+        positive_sample = self.triples[idx]
+        head, relation, tail = positive_sample
+        
+        negative_sample_list = []
+        negative_sample_size = 0
+
+        while negative_sample_size < self.negative_sample_size:
+            negative_sample = np.random.randint(0, self.nrelation,size=self.negative_sample_size*2)
+            mask = np.in1d(
+                    negative_sample, 
+                    self.true_realtion[(head, tail)], 
+                    assume_unique=True, 
+                    invert=True
+            )
+            
+            negative_sample = negative_sample[mask] # filter true triples
+            negative_sample_list.append(negative_sample)
+            negative_sample_size += negative_sample.size
+
+        negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
+        negative_sample = torch.LongTensor(negative_sample)
+        positive_sample = torch.LongTensor(positive_sample)
+
+        return positive_sample, negative_sample
     
     @staticmethod
-    def count_frequency(triples, start=4):
-        '''
-        Get frequency of a partial triple like (head, relation) or (relation, tail)
-        The frequency will be used for subsampling like word2vec
-        '''
-        count = {}
-        for head, relation, tail in triples:
-            if (head, relation) not in count:
-                count[(head, relation)] = start
-            else:
-                count[(head, relation)] += 1
-
-            if (tail, -relation-1) not in count:
-                count[(tail, -relation-1)] = start
-            else:
-                count[(tail, -relation-1)] += 1
-        return count
+    def collate_fn(data):
+        positive_sample = torch.stack([_[0] for _ in data], dim=0)
+        negative_sample = torch.stack([_[1] for _ in data], dim=0)
+        return positive_sample, negative_sample
     
     @staticmethod
     def get_true_head_and_tail(triples):
@@ -919,23 +355,20 @@ class NagativeSampleNewDataset(Dataset):
         be used to filter these true triples for negative sampling
         '''
         
-        true_head = {}
-        true_tail = {}
+        true_relation = {}
+       
 
         for head, relation, tail in triples:
-            if (head, relation) not in true_tail:
-                true_tail[(head, relation)] = []
-            true_tail[(head, relation)].append(tail)
-            if (relation, tail) not in true_head:
-                true_head[(relation, tail)] = []
-            true_head[(relation, tail)].append(head)
+            if (head, tail) not in true_relation:
+                true_relation[(head, tail)] = []
 
-        for relation, tail in true_head:
-            true_head[(relation, tail)] = np.array(list(set(true_head[(relation, tail)])))
-        for head, relation in true_tail:
-            true_tail[(head, relation)] = np.array(list(set(true_tail[(head, relation)])))                 
+            true_relation[(head, tail)].append(relation)
+           
+        for head, tail in true_relation:
+            true_relation[(head, tail)] = np.array(list(set(true_relation[(head, tail)])))
+                      
+        return true_relation
 
-        return true_head, true_tail
 
 class NagativeSampleDataset(Dataset):
     def __init__(self, triples, nentity, nrelation, negative_sample_size, mode,head_num=None,tail_num=None,all_traied=None):

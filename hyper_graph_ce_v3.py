@@ -230,15 +230,15 @@ def evaluate(model, reaction, e_number, c2eList, graph_info):
             argsort = torch.argsort(pred_interaction_, descending=True)
             ranking = (argsort[:] == e).nonzero()
             rank_list.append(ranking.item()+1)
-
-        rank = np.max(rank_list)
-        logs.append({
-            'MRR': 1.0/rank,
-            'MR': float(rank),
-            'HITS@1': 1.0 if rank <= 1 else 0.0,
-            'HITS@3': 1.0 if rank <= 50 else 0.0,
-            'HITS@10': 1.0 if rank <= 100 else 0.0,
-        })
+            rank = ranking.item()+1
+        # rank = np.max(rank_list)
+            logs.append({
+                'MRR': 1.0/rank,
+                'MR': float(rank),
+                'HITS@1': 1.0 if rank <= 1 else 0.0,
+                'HITS@3': 1.0 if rank <= 50 else 0.0,
+                'HITS@10': 1.0 if rank <= 100 else 0.0,
+            })
     metrics = {}
     for metric in logs[0].keys():
         metrics[metric] = sum([log[metric] for log in logs])/len(logs)
@@ -320,17 +320,11 @@ if __name__=="__main__":
     if cuda:
         model = model.cuda()
 
-    # for name, param in model.named_parameters():
-    #     if param.requires_grad:
-    #         print(name)
     optimizer = torch.optim.Adam([
         {
             'params':filter(lambda p: p.requires_grad, model.parameters())
         },
-        # {
-        #     'params':node_emb.weight,
-        # },
-        ], lr=lr#,weight_decay=1e-6
+        ], lr=lr
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))
@@ -339,8 +333,6 @@ if __name__=="__main__":
         logging.info('init: %s' % init_path)
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
         model.load_state_dict(checkpoint['model_state_dict'],strict=False)
-        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        # lr = optimizer.state_dict()['param_groups'][0]['lr']
         init_step = checkpoint['step']
 
     logging.info('Model: %s' % modelConfig['name'])
@@ -383,8 +375,8 @@ if __name__=="__main__":
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
-                metrics = test_inductive(model,valid_sampler)
-                # metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
+                # metrics = test_inductive(model,valid_sampler)
+                metrics = evaluate(model, graph_info["single_valid"],graph_info['e_num'], c2eList, graph_info)
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ',step, metrics)
@@ -408,8 +400,8 @@ if __name__=="__main__":
         model.load_state_dict(checkpoint['model_state_dict'],strict=True)
 
         logging.info('Test InstanceOf at step: %d' % checkpoint['step'])
-        # metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
-        metrics = test_inductive(model,test_sampler)
+        metrics = evaluate(model, graph_info["single_test"],graph_info['e_num'], c2eList, graph_info)
+        # metrics = test_inductive(model,test_sampler)
         logset.log_metrics('Test ',checkpoint['step'], metrics)
 
     else:

@@ -9,12 +9,37 @@ import json
 
 # 处理酶和化合物的数据
 print("begin")
-with open("./bkms_v2.pkl",'rb') as f:
+with open("./bkms_new.pkl",'rb') as f:
     data = pickle.load(f)
     f.close()
 
 print("load finised")
 print(data.keys())
+
+train_data = data["train"]
+valid_data = data["valid"]
+test_data = data["test"]
+
+def filter_train(train_set, valid_data):
+    new_valid_data = []
+    for c_list, e in valid_data:
+        new_clist = []
+        for c in c_list:
+            if (c,e) in train_set: continue
+            new_clist.append(c)
+        if len(new_clist) != 0:
+            new_valid_data.append((new_clist, e))
+    return new_valid_data
+
+train_set = set()
+for c_list, e in train_data:
+    for c in c_list:
+        train_set.add((c,e))
+
+valid_data = filter_train(train_set, valid_data)
+test_data = filter_train(train_set, test_data)
+
+
 
 def build_id_dict(data):
     cset = set()
@@ -430,5 +455,5 @@ graph_info = {
 graph_info.update(sing_graph)
 graph_info.update(double_graph)
 
-torch.save(graph_info,"../pre_handle_data/ce_data_double_base_v4_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_double_base_v4_train_info.pkl")
+# torch.save(graph_info,"../pre_handle_data/ce_data_single_base_v4_graph_info.pkl")
+# torch.save(train_info,"../pre_handle_data/ce_data_single_base_v4_train_info.pkl")

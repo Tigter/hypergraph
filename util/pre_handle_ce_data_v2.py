@@ -10,26 +10,45 @@ import json
 # 处理酶和化合物的数据
 print("begin")
 
-# with open("./bkms_v2.pkl",'rb') as f:
-#     data = pickle.load(f)
-#     f.close()
-
-# print("load finised")
-
-# print(data.keys())
-# print(data.keys())
-
-# data["train"] = data["sing_train"]
-# data["valid"] = data["sing_valid"]
-# data["test"] = data["sing_test"]
-
-
-with open("./bkms_new.pkl",'rb') as f:
+with open("./bkms_v2.pkl",'rb') as f:
     data = pickle.load(f)
     f.close()
+
 print("load finised")
+
 print(data.keys())
 print(data.keys())
+
+data["train"] = data["sing_train"]
+data["valid"] = data["sing_valid"]
+data["test"] = data["sing_test"]
+
+
+def filter_train(train_set, valid_data):
+    new_valid_data = []
+    for c_list, e in valid_data:
+        new_clist = []
+        for c in c_list:
+            if (c,e) in train_set: continue
+            new_clist.append(c)
+        if len(new_clist) != 0:
+            new_valid_data.append((new_clist, e))
+    return new_valid_data
+
+train_set = set()
+for c_list, e in data["train"]:
+    for c in c_list:
+        train_set.add((c,e))
+
+data["valid"] = filter_train(train_set, data["valid"])
+data["test"] = filter_train(train_set, data["test"])
+
+
+# with open("./bkms_new.pkl",'rb') as f:
+#     data = pickle.load(f)
+#     f.close()
+# print("load finised")
+# print(data.keys())
 
 # data["train"] = data["train"]
 # data["valid"] = data["sing_valid"]
@@ -217,12 +236,22 @@ entity_edge = r_edge + val_r_edge
 entity = c_node + val_c_node
 v2e_index = torch.stack([torch.as_tensor(entity, dtype=torch.long), torch.as_tensor(entity_edge, dtype=torch.long)])
 
+
+entity_edge = r_edge 
+entity = c_node
+v2e_train_index = torch.stack([torch.as_tensor(entity_edge, dtype=torch.long), torch.as_tensor(entity, dtype=torch.long)])
+
+entity_edge = r_edge + val_r_edge
+entity = c_node + val_c_node
+v2e_valid_index = torch.stack([torch.as_tensor(entity_edge, dtype=torch.long), torch.as_tensor(entity, dtype=torch.long)])
+
+
 # 建立酶和超边之间的连接:只在训练图当中
 e2r_index = torch.stack([torch.LongTensor(rr_edge), torch.LongTensor(re_node)])
 
 
 print("Relation and Edge: %s" % (str(e2r_index.shape)))
-print("Entity and Edge: %s" % (str(v2e_index.shape)))
+print("Entity and Edge: %s" % (str(v2e_train_index.shape)))
 
 # 能够完成训练集当中，化合物和超边之间的连接
 # 构建训练集当中节点和超边之间的关联
@@ -321,6 +350,8 @@ graph_info = {
     "valid_edge_index": new_edge_index,
     "valid_edge_type": new_edge_type,
     "node2edge_index": v2e_index,
+    "v2e_train_index": v2e_train_index,
+    "v2e_valid_index": v2e_valid_index,
     "edge2rel_index": e2r_index,
     "attr2e_index":attr2e_index,
     "c_num": c_num,
@@ -328,6 +359,11 @@ graph_info = {
     "base_node_num":uni_id,
     "max_train_id": max_train_num,
     "max_edge_id":edge_id,
+    "single_train":data["train"],
+    "single_valid":data["valid"],
+    "single_test":data["test"],
+    "c2id": c2id,
+    "e2id": e2id,
 }
 
 train_info = {
@@ -339,5 +375,5 @@ train_info = {
     "edgeid2true_all": edgeid2true_all,
 }
 
-torch.save(graph_info,"../pre_handle_data/ce_data_single_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/ce_data_single_train_info.pkl")
+torch.save(graph_info,"../pre_handle_data/bkms_single_graph_v4_filter_info.pkl")
+torch.save(train_info,"../pre_handle_data/bkms_single_train_v4_filter_info.pkl")

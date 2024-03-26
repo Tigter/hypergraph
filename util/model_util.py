@@ -5,7 +5,7 @@ import os
 import json
 
 import torch.nn.functional as F
-from util.dataloader import TestDataset
+from util.dataloader import TestDataset,TestReactionRelationDataset
 import logging
 from util.dataloader import MulTestDataset
 from sklearn.metrics import average_precision_score
@@ -82,22 +82,20 @@ class ModelUtil(object):
         #     os.path.join(root_path, 'relation_embedding'), 
         #     relation_embedding
         # )
-
-class Trainer(object):
+class ReactionTrainer(object):
     # train_type:  NagativeSample and 1toN
-    def __init__(self, data, train_iterator, model, optimizer, loss_function, args, lr_scheduler=None,logging=None,train_type='NagativeSample'):
+    def __init__(self, data, train_iterator, model, optimizer, loss_function, args, lr_scheduler=None,logging=None,train_type='NagativeSample',entity_iter=None):
         self.args = args
         self.train_type = train_type
         self.model = model
         self.optimizer = optimizer
-        # 
         self.step = 0
-        # self.step = args.init_step
         self.data = data
         self.max_step = args.max_steps
         self.train_iterator = train_iterator
         self.lr_scheduler = lr_scheduler
         self.loss_function = loss_function
+        self.entity_iter=entity_iter
         self.logging = logging
         self.best_metrics = {'MRR':0.0, 'MR':1000000000, 'HITS@1':0.0,'HITS@3':0.0,'HITS@10':0.0}
 
@@ -128,74 +126,54 @@ class Trainer(object):
             logging.info('adversarial_temperature = %f' % self.args.adversarial_temperature)
 
     def train_model_(self):
-        Trainer.train_model(data=self.data,train_iterator=self.train_iterator,
+        ReactionTrainer.train_model(data=self.data,train_iterator=self.train_iterator,
                     model=self.model,optimizer=self.optimizer,loss_function=self.loss_function,
                     max_step=self.max_step, init_step=self.step,
                     args=self.args,best_metrics=self.best_metrics,
-                    lr_scheduler=self.lr_scheduler,train_type=self.train_type)
-
-    # 数据集产生 ground truth：损失基于ground truth 和 预测结果计算
-    @staticmethod
-    def train_step_1(model, optimizer, train_iterator,loss_function,args):
-        model.train()
-        optimizer.zero_grad()
-        h_and_rs, ground_truth,value, mode = next(train_iterator)
-
-        if args.cuda:
-            h_and_rs = h_and_rs.cuda()
-            ground_truth = ground_truth.cuda()
-            value = value.cuda()
-        ground_truth.detach()   
-        value.detach()
-        ground_truth = ground_truth 
-        if args.label_smoothing != 0.0:
-            
-            ground_truth = ((1.0-args.label_smoothing)*ground_truth) + (1.0/ground_truth.size(1))  
-            
-        if mode[0] == 'hr_all':
-            h = h_and_rs[:,0]
-            r = h_and_rs[:,1]
-            pre_score = model(h,r, None, mode=mode[0])
-        else:
-            t = h_and_rs[:,0]
-            r = h_and_rs[:,1]
-            pre_score = model(None,r, t, mode=mode[0])
-        pre_score = torch.sigmoid(pre_score*value)
-      
-        loss = loss_function(pre_score,ground_truth)
-        loss.backward()
-        optimizer.step()
-        log = {
-            'loss': loss.item()
-        }
-        return log
+                    lr_scheduler=self.lr_scheduler,train_type=self.train_type,entity_iter=self.entity_iter)
 
     # 训练负采样的数据集: 数据集产生正样本和负样本, 损失基于正负样本的计算
     @staticmethod
-    def train_step(model, optimizer, train_iterator,loss_function, args):
+    def train_step(model, optimizer, train_iterator,loss_function, args,entity_iter=None):
         '''
         A single train step. Apply back-propation and return the loss
         '''
 
         model.train()
         optimizer.zero_grad()
-        positive_sample,negative_sample, subsampling_weight, mode = next(train_iterator)
+        head,tail, relation, negative_sample, head_index, tail_index = next(train_iterator)
 
         if args.cuda:
-            positive_sample = positive_sample.cuda()
+            head = head.cuda()
+            tail = tail.cuda()
+            relation = relation.cuda()
+            head_index = head_index.cuda()
+            tail_index = tail_index.cuda()
             negative_sample = negative_sample.cuda()
-            subsampling_weight = subsampling_weight.cuda()
        
-        h = positive_sample[:,0]
-        r = positive_sample[:,1]
-        t = positive_sample[:,2]
-        if mode == 'hr_t':
-            negative_score = model(h,r, negative_sample, mode=mode)
-        else:
-            negative_score = model(negative_sample,r,t, mode=mode)
+        negative_score = model.full_score(head,head_index,tail,tail_index,negative_sample)
+        positive_score= model.full_score(head,head_index,tail,tail_index,relation)
+        loss = loss_function(positive_score, negative_score)
 
-        positive_score= model(h,r,t)
-        loss = loss_function(positive_score, negative_score,subsampling_weight)
+
+        head,tail, relation, negative_sample, head_index, tail_index,neg_index,mode = next(entity_iter)
+
+        if args.cuda:
+            head = head.cuda()
+            tail = tail.cuda()
+            relation = relation.cuda()
+            head_index = head_index.cuda()
+            tail_index = tail_index.cuda()
+            negative_sample = negative_sample.cuda()
+            neg_index = neg_index.cuda()
+        
+        positive_score= model.full_score(head,head_index,tail,tail_index,relation)
+        if mode == "hr_t":
+            negative_score = model.full_score(head,head_index,negative_sample,neg_index,relation,mode)
+        else:
+            negative_score = model.full_score(negative_sample,neg_index,tail,tail_index,relation,mode)
+        
+        entity_loss = loss_function(positive_score, negative_score)
 
         regularization = 0
         if args.regularization != 0.0:
@@ -204,41 +182,43 @@ class Trainer(object):
                 model.relation_embedding.weight.data.norm(p = 3).norm(p = 3)**3
             )
             loss += regularization
+        loss += entity_loss
         loss.backward()
         optimizer.step()
 
         log = {
             'regularization':regularization,
+            "entity loss":entity_loss.item(),
             'loss': loss.item()
         }
         return log
-
+  
     @staticmethod
-    def train_model(data, train_iterator, model, optimizer,loss_function, max_step, init_step,args,best_metrics,lr_scheduler=None, train_type="NagativeSample"):
+    def train_model(data, train_iterator, model, optimizer,loss_function, max_step, init_step,args,best_metrics,lr_scheduler=None, train_type="NagativeSample",entity_iter=None):
         training_logs = []
 
         if train_type == 'NagativeSample':
-            TRAIN_STEP = Trainer.train_step
+            TRAIN_STEP = ReactionTrainer.train_step
         else:
-            TRAIN_STEP = Trainer.train_step_1
+            TRAIN_STEP = ReactionTrainer.train_step_1
 
         for step in range(init_step, max_step):
-            log = TRAIN_STEP(model, optimizer,train_iterator,loss_function,args)
+            log = TRAIN_STEP(model, optimizer,train_iterator,loss_function,args,entity_iter)
             training_logs.append(log)
-            if lr_scheduler != None:
-                lr_scheduler.step()
+            # if lr_scheduler != None:
+            lr_scheduler.step()
             if step % args.save_checkpoint_steps == 0:
                 save_variable_list = {
                     'step': step, 
                     'current_learning_rate': optimizer.state_dict()['param_groups'][0]['lr'],
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list,args)
-            if  step % args.valid_steps == 0 and step !=0:
+            if  step % args.valid_steps == 0 and step != 0:
                 save_variable_list = {
                     'step': step, 
                     'current_learning_rate': optimizer.state_dict()['param_groups'][0]['lr'],
                 }
-                metrics = ModelTester.test_step(model, data.valid, data.all_true_triples, args)
+                metrics = ModelTester.test_step(model, data["valid"], data["all_true_triples"], args)
                 logset.log_metrics('Valid', step, metrics)
                 ModelUtil.save_best_model(metrics,best_metrics, model,optimizer,save_variable_list,args)
             
@@ -255,6 +235,215 @@ class Trainer(object):
             # todo 其他需要保存的参数
         }
         ModelUtil.save_model(model,optimizer,save_variable_list,args)
+
+# class Trainer(object):
+#     # train_type:  NagativeSample and 1toN
+#     def __init__(self, data, train_iterator, model, optimizer, loss_function, args, lr_scheduler=None,logging=None,train_type='NagativeSample'):
+#         self.args = args
+#         self.train_type = train_type
+#         self.model = model
+#         self.optimizer = optimizer
+#         # 
+#         self.step = 0
+#         # self.step = args.init_step
+#         self.data = data
+#         self.max_step = args.max_steps
+#         self.train_iterator = train_iterator
+#         self.lr_scheduler = lr_scheduler
+#         self.loss_function = loss_function
+#         self.logging = logging
+#         self.best_metrics = {'MRR':0.0, 'MR':1000000000, 'HITS@1':0.0,'HITS@3':0.0,'HITS@10':0.0}
+
+#     def _init_model(self):
+#         if self.args.init_checkpoint:
+#             checkpoint = torch.load(os.path.join(self.args.init_checkpoint, 'checkpoint'))
+#             self.init_step = checkpoint['step']
+#             self.model.load_state_dict(checkpoint['model_state_dict'])
+#             self.current_learning_rate = checkpoint['current_learning_rate']
+#             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+#         else:
+#             self.init_step = 0
+
+#     def logging_model_info(self):
+#         pass
+
+#     def logging_traing_info(self):
+#         logging = self.logging
+#         logging.info('Start Training...')
+#         logging.info('init_step = %d' % self.step)
+#         logging.info('max_step = %d' % self.max_step)
+#         logging.info('batch_size = %d' % self.args.batch_size)
+#         logging.info('negative_adversarial_sampling = %d' % self.args.negative_adversarial_sampling)
+#         logging.info('hidden_dim = %d' % self.args.hidden_dim)
+#         logging.info('gamma = %f' % self.args.gamma)
+#         logging.info('negative_adversarial_sampling = %s' % str(self.args.negative_adversarial_sampling))
+#         if self.args.negative_adversarial_sampling:
+#             logging.info('adversarial_temperature = %f' % self.args.adversarial_temperature)
+
+#     def train_model_(self):
+#         Trainer.train_model(data=self.data,train_iterator=self.train_iterator,
+#                     model=self.model,optimizer=self.optimizer,loss_function=self.loss_function,
+#                     max_step=self.max_step, init_step=self.step,
+#                     args=self.args,best_metrics=self.best_metrics,
+#                     lr_scheduler=self.lr_scheduler,train_type=self.train_type)
+
+#     # 数据集产生 ground truth：损失基于ground truth 和 预测结果计算
+#     @staticmethod
+#     def train_step_1(model, optimizer, train_iterator,loss_function,args):
+#         model.train()
+#         optimizer.zero_grad()
+#         h_and_rs, ground_truth,value, mode = next(train_iterator)
+
+#         if args.cuda:
+#             h_and_rs = h_and_rs.cuda()
+#             ground_truth = ground_truth.cuda()
+#             value = value.cuda()
+#         ground_truth.detach()   
+#         value.detach()
+#         ground_truth = ground_truth 
+#         if args.label_smoothing != 0.0:
+            
+#             ground_truth = ((1.0-args.label_smoothing)*ground_truth) + (1.0/ground_truth.size(1))  
+            
+#         if mode[0] == 'hr_all':
+#             h = h_and_rs[:,0]
+#             r = h_and_rs[:,1]
+#             pre_score = model(h,r, None, mode=mode[0])
+#         else:
+#             t = h_and_rs[:,0]
+#             r = h_and_rs[:,1]
+#             pre_score = model(None,r, t, mode=mode[0])
+#         pre_score = torch.sigmoid(pre_score*value)
+      
+#         loss = loss_function(pre_score,ground_truth)
+#         loss.backward()
+#         optimizer.step()
+#         log = {
+#             'loss': loss.item()
+#         }
+#         return log
+
+#     # 训练负采样的数据集: 数据集产生正样本和负样本, 损失基于正负样本的计算
+#     @staticmethod
+#     def train_step(model, optimizer, train_iterator,loss_function, args):
+#         '''
+#         A single train step. Apply back-propation and return the loss
+#         '''
+
+#         model.train()
+#         optimizer.zero_grad()
+#         positive_sample,negative_sample = next(train_iterator)
+
+#         if args.cuda:
+#             positive_sample = positive_sample.cuda()
+#             negative_sample = negative_sample.cuda()
+       
+#         h = positive_sample[:,0]
+#         r = positive_sample[:,1]
+#         t = positive_sample[:,2]
+#         negative_score = model(h,negative_sample,t)
+#         positive_score= model(h,r,t)
+#         loss = loss_function(positive_score, negative_score)
+
+#         regularization = 0
+#         if args.regularization != 0.0:
+#             regularization = args.regularization * (
+#                 model.entity_embedding.weight.data.norm(p = 3)**3 + 
+#                 model.relation_embedding.weight.data.norm(p = 3).norm(p = 3)**3
+#             )
+#             loss += regularization
+#         loss.backward()
+#         optimizer.step()
+
+#         log = {
+#             'regularization':regularization,
+#             'loss': loss.item()
+#         }
+#         return log
+#     # @staticmethod
+#     # def train_step(model, optimizer, train_iterator,loss_function, args):
+#     #     '''
+#     #     A single train step. Apply back-propation and return the loss
+#     #     '''
+
+#     #     model.train()
+#     #     optimizer.zero_grad()
+#     #     positive_sample,negative_sample, subsampling_weight, mode = next(train_iterator)
+
+#     #     if args.cuda:
+#     #         positive_sample = positive_sample.cuda()
+#     #         negative_sample = negative_sample.cuda()
+#     #         subsampling_weight = subsampling_weight.cuda()
+       
+#     #     h = positive_sample[:,0]
+#     #     r = positive_sample[:,1]
+#     #     t = positive_sample[:,2]
+#     #     if mode == 'hr_t':
+#     #         negative_score = model(h,r, negative_sample, mode=mode)
+#     #     else:
+#     #         negative_score = model(negative_sample,r,t, mode=mode)
+
+#     #     positive_score= model(h,r,t)
+#     #     loss = loss_function(positive_score, negative_score,subsampling_weight)
+
+#     #     regularization = 0
+#     #     if args.regularization != 0.0:
+#     #         regularization = args.regularization * (
+#     #             model.entity_embedding.weight.data.norm(p = 3)**3 + 
+#     #             model.relation_embedding.weight.data.norm(p = 3).norm(p = 3)**3
+#     #         )
+#     #         loss += regularization
+#     #     loss.backward()
+#     #     optimizer.step()
+
+#     #     log = {
+#     #         'regularization':regularization,
+#     #         'loss': loss.item()
+#     #     }
+#     #     return log
+
+#     @staticmethod
+#     def train_model(data, train_iterator, model, optimizer,loss_function, max_step, init_step,args,best_metrics,lr_scheduler=None, train_type="NagativeSample"):
+#         training_logs = []
+
+#         if train_type == 'NagativeSample':
+#             TRAIN_STEP = Trainer.train_step
+#         else:
+#             TRAIN_STEP = Trainer.train_step_1
+
+#         for step in range(init_step, max_step):
+#             log = TRAIN_STEP(model, optimizer,train_iterator,loss_function,args)
+#             training_logs.append(log)
+#             # if lr_scheduler != None:
+#             lr_scheduler.step()
+#             if step % args.save_checkpoint_steps == 0:
+#                 save_variable_list = {
+#                     'step': step, 
+#                     'current_learning_rate': optimizer.state_dict()['param_groups'][0]['lr'],
+#                 }
+#                 ModelUtil.save_model(model,optimizer,save_variable_list,args)
+#             if  step % args.valid_steps == 0 and step !=0:
+#                 save_variable_list = {
+#                     'step': step, 
+#                     'current_learning_rate': optimizer.state_dict()['param_groups'][0]['lr'],
+#                 }
+#                 metrics = ModelTester.test_step(model, data.valid, data.all_true_triples, args)
+#                 logset.log_metrics('Valid', step, metrics)
+#                 ModelUtil.save_best_model(metrics,best_metrics, model,optimizer,save_variable_list,args)
+            
+#             if step % args.log_steps == 0:
+#                 metrics = {}
+#                 for metric in training_logs[0].keys():
+#                     metrics[metric] = sum([log[metric] for log in training_logs])/len(training_logs)
+#                 logset.log_metrics('Training average', step, metrics)
+#                 training_logs = []
+
+#         save_variable_list = {
+#             'step': max_step, 
+#             'current_learning_rate': optimizer.state_dict()['param_groups'][0]['lr'],
+#             # todo 其他需要保存的参数
+#         }
+#         ModelUtil.save_model(model,optimizer,save_variable_list,args)
 
 class ModelTester(object):
     def __init__(self,model):
@@ -424,7 +613,92 @@ class ModelTester(object):
         metrics['total_num'] = test_num
         return metrics
     
-    # 可以输出测试的loss，但是目前仅支持Pair Loss.
+    # # 可以输出测试的loss，但是目前仅支持Pair Loss.
+    # @staticmethod
+    # def test_step(model, test_triples, all_true_triples, args, loss_function=None):
+    #     '''
+    #     Evaluate the model on test or valid datasets
+    #     '''
+    #     model.eval()
+    #     test_dataloader_head = DataLoader(
+    #         TestDataset(
+    #             test_triples, 
+    #             all_true_triples, 
+    #             args.nentity, 
+    #             args.nrelation, 
+    #             'h_rt'
+    #         ), 
+    #         batch_size=args.test_batch_size,
+    #         num_workers=1, 
+    #         collate_fn=TestDataset.collate_fn
+    #     )
+    #     test_dataloader_tail = DataLoader(
+    #         TestDataset(
+    #             test_triples, 
+    #             all_true_triples, 
+    #             args.nentity, 
+    #             args.nrelation, 
+    #             'hr_t'
+    #         ), 
+    #         batch_size=args.test_batch_size,
+    #         num_workers=1, 
+    #         collate_fn=TestDataset.collate_fn
+    #     )
+    #     test_dataset_list = [test_dataloader_head, test_dataloader_tail]
+    #     logs = []
+    #     step = 0
+    #     total_steps = sum([len(dataset) for dataset in test_dataset_list])
+    #     with torch.no_grad():
+    #         for test_dataset in test_dataset_list:
+    #             for positive_sample, negative_sample, filter_bias, mode in test_dataset:
+    #                 batch_size = positive_sample.size(0)
+    #                 if args.cuda:
+    #                     positive_sample = positive_sample.cuda()
+    #                     negative_sample = negative_sample.cuda()
+    #                     filter_bias = filter_bias.cuda()
+                        
+    #                 h = positive_sample[:,0]
+    #                 r = positive_sample[:,1]
+    #                 t = positive_sample[:,2] 
+    #                 if mode == 'hr_t':
+    #                     negative_score = model(h,r, negative_sample, mode=mode)
+    #                 else:
+    #                     negative_score = model(negative_sample,r,t, mode=mode)
+                    
+    #                 if loss_function != None:
+    #                     positive_score = model(h,r, t)
+    #                     loss = loss_function(positive_score,negative_score)
+    #                     logging.info("loss of test is %f" % loss)
+
+    #                 score = negative_score + filter_bias
+    #                 argsort = torch.argsort(score, dim = 1, descending=True)
+    #                 if mode == 'h_rt':
+    #                     positive_arg = h
+    #                 elif mode == 'hr_t':
+    #                     positive_arg = t
+    #                 else:
+    #                     raise ValueError('mode %s not supported' % mode)
+                    
+    #                 for i in range(batch_size):
+    #                     ranking = (argsort[i, :] == positive_arg[i]).nonzero()
+    #                     assert ranking.size(0) == 1
+    #                     ranking = 1 + ranking.item()
+    #                     logs.append({
+    #                         'MRR': 1.0/ranking,
+    #                         'MR': float(ranking),
+    #                         'HITS@1': 1.0 if ranking <= 1 else 0.0,
+    #                         'HITS@3': 1.0 if ranking <= 3 else 0.0,
+    #                         'HITS@10': 1.0 if ranking <= 10 else 0.0,
+    #                     })
+    #                 if step % args.test_log_steps == 0:
+    #                     logging.info('Evaluating the model... (%d/%d)' % (step, total_steps))
+    #                 step += 1
+    #     metrics = {}
+    #     for metric in logs[0].keys():
+    #         metrics[metric] = sum([log[metric] for log in logs])/len(logs)
+    #     return metrics
+
+
     @staticmethod
     def test_step(model, test_triples, all_true_triples, args, loss_function=None):
         '''
@@ -432,63 +706,39 @@ class ModelTester(object):
         '''
         model.eval()
         test_dataloader_head = DataLoader(
-            TestDataset(
+            TestReactionRelationDataset(
                 test_triples, 
                 all_true_triples, 
                 args.nentity, 
                 args.nrelation, 
-                'h_rt'
             ), 
             batch_size=args.test_batch_size,
             num_workers=1, 
-            collate_fn=TestDataset.collate_fn
+            collate_fn=TestReactionRelationDataset.collate_fn
         )
-        test_dataloader_tail = DataLoader(
-            TestDataset(
-                test_triples, 
-                all_true_triples, 
-                args.nentity, 
-                args.nrelation, 
-                'hr_t'
-            ), 
-            batch_size=args.test_batch_size,
-            num_workers=1, 
-            collate_fn=TestDataset.collate_fn
-        )
-        test_dataset_list = [test_dataloader_head, test_dataloader_tail]
+        
+        test_dataset_list = [test_dataloader_head]
         logs = []
         step = 0
         total_steps = sum([len(dataset) for dataset in test_dataset_list])
         with torch.no_grad():
             for test_dataset in test_dataset_list:
-                for positive_sample, negative_sample, filter_bias, mode in test_dataset:
-                    batch_size = positive_sample.size(0)
+                for head, tail, relation, negative_sample, filter_bias, head_index, tail_index in test_dataset:
+                    batch_size = relation.size(0)
                     if args.cuda:
-                        positive_sample = positive_sample.cuda()
+                        head = head.cuda()
+                        tail = tail.cuda()
+                        relation = relation.cuda()
+                        head_index = head_index.cuda()
+                        tail_index = tail_index.cuda()
+
                         negative_sample = negative_sample.cuda()
                         filter_bias = filter_bias.cuda()
-                        
-                    h = positive_sample[:,0]
-                    r = positive_sample[:,1]
-                    t = positive_sample[:,2] 
-                    if mode == 'hr_t':
-                        negative_score = model(h,r, negative_sample, mode=mode)
-                    else:
-                        negative_score = model(negative_sample,r,t, mode=mode)
-                    
-                    if loss_function != None:
-                        positive_score = model(h,r, t)
-                        loss = loss_function(positive_score,negative_score)
-                        logging.info("loss of test is %f" % loss)
-
+                  
+                    negative_score = model.full_score(head, head_index,tail, tail_index, negative_sample)
                     score = negative_score + filter_bias
                     argsort = torch.argsort(score, dim = 1, descending=True)
-                    if mode == 'h_rt':
-                        positive_arg = h
-                    elif mode == 'hr_t':
-                        positive_arg = t
-                    else:
-                        raise ValueError('mode %s not supported' % mode)
+                    positive_arg = relation
                     
                     for i in range(batch_size):
                         ranking = (argsort[i, :] == positive_arg[i]).nonzero()
