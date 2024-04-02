@@ -7,3 +7,4 @@ models/*
 *.log
 pre_handle_data/*
 # *.pkl
+brenda_data/filter_data/pub_result/

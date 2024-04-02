@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torch_scatter import scatter_mean
-
+from torch_geometric.nn import aggr
 class ComplEx(nn.Module):
     def __init__(self, n_entity, n_relation, dim, gamma=12,p_norm=1):
         super(ComplEx,self).__init__()
@@ -10,20 +10,20 @@ class ComplEx(nn.Module):
         self.n_entity = n_entity
         self.n_relation = n_relation
         self.epsilon = 2
-        self.entity_dim = dim
+        self.entity_dim = dim*2
         self.relation_dim = dim
         self.entity_embedding = nn.Embedding(n_entity, self.entity_dim)
         self.relation_embedding = nn.Embedding(n_relation,self.relation_dim)
 
-        # self.aggr = torch_geometric.nn.aggr.AttentionalAggregation(
-        #     torch.nn.Sequential(
-        #         torch.nn.Linear(dim, 1),
-        #         torch.nn.Sigmoid()
-        #     ), 
-        #     torch.nn.Sequential(
-        #         torch.nn.Linear(dim,dim),
-        #         torch.nn.Sigmoid())
-        # )
+        self.aggr = aggr.AttentionalAggregation(
+            torch.nn.Sequential(
+                torch.nn.Linear(self.entity_dim, 1),
+                torch.nn.Sigmoid()
+            ), 
+            torch.nn.Sequential(
+                torch.nn.Linear(self.entity_dim,self.entity_dim),
+                torch.nn.Sigmoid())
+        )
         if gamma != None:
             self.embedding_range = (gamma + 2)/dim
             nn.init.uniform_(
@@ -69,14 +69,17 @@ class ComplEx(nn.Module):
         head_index = head_index.squeeze(1)
         batch_size = relation.shape[0]
 
-        head_emb = scatter_mean(head_emb,head_index, dim=0,)
+        # head_emb = scatter_mean(head_emb,head_index, dim=0,)
+        head_emb = self.aggr(head_emb,head_index, dim=0,)
+
         if mode == "h_rt":
             head_emb = head_emb.reshape(batch_size,-1,self.entity_dim)
 
 
         tail_emb = self.entity_embedding(tail)
         tail_index = tail_index.squeeze(1)
-        tail_emb = scatter_mean(tail_emb,tail_index, dim=0)
+        # tail_emb = scatter_mean(tail_emb,tail_index, dim=0)
+        tail_emb = self.aggr(tail_emb,tail_index, dim=0)
         if mode == "hr_t":
             tail_emb = tail_emb.reshape(batch_size,-1,self.entity_dim)
 
@@ -91,7 +94,7 @@ class ComplEx(nn.Module):
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
         
-        return self.complex_score(head_emb, relation, tail_emb)
+        return self.rotate_function(head_emb, relation, tail_emb)
 
        
 
@@ -105,4 +108,35 @@ class ComplEx(nn.Module):
         score_im = head_re * relation_im + head_im * relation_re 
         result = score_re * tail_re + score_im * tail_im
         score = torch.sum(result,dim=-1)
+        return score
+
+    def dist_mult_score(self, head, relation, tail):
+        socre = head *  tail * relation
+        score = torch.sum(socre,dim=-1)
+        return score
+
+    def rotate_function(self, head, relation, tail):
+        pi = 3.14159265358979323846
+        re_head, im_head = torch.chunk(head, 2, dim=2)
+        re_tail, im_tail = torch.chunk(tail, 2, dim=2)
+
+        # CreateMake phases of relations uniformly distributed in [-pi, pi]
+        phase_relation = relation/(self.embedding_range/pi)
+       
+        re_relation = torch.cos(phase_relation)
+        im_relation = torch.sin(phase_relation)
+
+        if  tail.shape[1] == relation.shape[1]:
+            re_score = re_relation * re_tail + im_relation * im_tail
+            im_score = re_relation * im_tail - im_relation * re_tail
+            re_score = re_score - re_head
+            im_score = im_score - im_head
+        else:
+            re_score = re_head * re_relation - im_head * im_relation
+            im_score = re_head * im_relation + im_head * re_relation
+            re_score = re_score - re_tail
+            im_score = im_score - im_tail
+        score = torch.stack([re_score, im_score], dim = 0)
+        score = score.norm(dim = 0)
+        score =  - score.sum(dim = 2)
         return score

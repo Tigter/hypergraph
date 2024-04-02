@@ -43,16 +43,17 @@ def trans2id(train_data, entity_dict,relation_dict ):
         e = e.strip()
         train_id_data.append((left_id, right_id, relation_dict[e]))
     return train_id_data
+
 def load_data():
 
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/train_reaction.json") as f:
+    with open("/home/tengwei/hypergraph/brenda_data/filter_data/train_reaction.json") as f:
         train_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/valid_reaction.json") as f:
+    with open("/home/tengwei/hypergraph/brenda_data/filter_data/valid_reaction.json") as f:
         valid_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/test_reaction.json") as f:
+    with open("/home/tengwei/hypergraph/brenda_data/filter_data/test_reaction.json") as f:
         test_data = json.load(f)
     
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/reaction_entity.dict") as f:
+    with open("/home/tengwei/hypergraph/brenda_data/filter_data/reaction_entity.dict") as f:
         datas = f.readlines()
         entity_dict = {}
         for line in datas:
@@ -61,7 +62,7 @@ def load_data():
             value = int(value.strip())
             entity_dict[key] = value
 
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/reaction_relation.dict") as f:
+    with open("/home/tengwei/hypergraph/brenda_data/filter_data/reaction_relation.dict") as f:
         datas = f.readlines()
         relation_dict = {}
         for line in datas:
@@ -119,10 +120,6 @@ def bi_nagativeSampleDataset(train_triples,nentity,nrelation, args):
         collate_fn=NagativeReactionSampleDataset.collate_fn
     )
     entity_iter = BidirectionalOneShotIterator(entity_dataloader_head,entity_dataloader_tail)
-
-
-
-
     
     return train_iterator,entity_iter
 
@@ -137,61 +134,9 @@ def OneToN_data_iterator(train_triples,nentity,nrelation, args):
 
 
 def buildModel(args,data):
-    model = None
-    name_to_model = {
-        # "TransE":TransE,
-        # "TransH":TransH,
-        # "TransR":TransR, 
-        # "PairRE":PairRE,
-        # "DistMult":DistMult,
-        # "HoLE":HoLE,
-        "ComplEx":ComplEx,
-        # "RotatE":RotatE,
-        # "RotPro":RotPro,
-        # "TuckER":TuckER,
-    }
     return ComplEx(n_entity=data["nentity"],
             n_relation=data["nrelation"],
-            dim=args.hidden_dim)
-    model_class = name_to_model[args.model]
-
-    if args.model in ["TransE","TransH","DistMult","HoLE","ComplEx","PairRE","RotatE"]:
-        model =  model_class(
-            n_entity=data["nentity"],
-            n_relation=data["nrelation"],
-            dim=args.hidden_dim
-        )
-    elif args.model in  ["TransR"]:
-        model = model_class(
-            n_entity=data["nentity"],
-            n_relation=data["nrelation"],
-            entity_dim=args.hidden_dim,
-            relation_dim=args.relation_dim
-        )
-       
-    elif args.model in ["TuckER"]:
-        model = model_class(
-            n_entity=data["nentity"],
-            n_relation=data["nrelation"],
-            entity_dim=args.hidden_dim,
-            relation_dim = args.relation_dim,
-            dropout1 = args.dropout1,
-            dropout2 = args.dropout2,
-            dropout3 = args.dropout3
-        ) 
-    elif args.model in ["RotPro"]:
-        model = model_class(
-            n_entity=data["nentity"],
-            n_relation=data["nrelation"],
-            entity_dim=args.hidden_dim,
-            relation_dim = args.relation_dim,
-            gamma = args.gamma
-        ) 
-    else:
-        raise ValueError("Unknown model")
-
-    return model
-
+            dim=args.hidden_dim,gamma=args.gamma)
 
 def override_config(args):
     '''
@@ -222,7 +167,7 @@ def buildLoss(name,args):
     if name not in name_to_loss:
         raise ValueError("Sorry! Unknown Loss Name, you can implement it by yourself")
     if name in ["NSSAL","MRL"]:
-        loss = name_to_loss[name](gamma=args.gamma)
+        loss = name_to_loss[name](gamma=args.gamma, plus_gamma=True)
     else:
         loss = name_to_loss[name]()
     return loss
@@ -279,8 +224,6 @@ def main(args):
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
-    
-
     logging.info('Model: %s' % args.model)
     logging.info('Data Path: %s' % args.data_path)
     logging.info('#entity: %d' % data["nentity"])
@@ -307,7 +250,7 @@ def main(args):
                 args=args,
                 lr_scheduler=lr_scheduler,
                 logging=logging,
-                train_type=args.train_type,entity_iter=entity_iter)
+                train_type=args.train_type,entity_iter=None)
         trainer.logging_traing_info()
         trainer.train_model_()
         step = args.max_steps

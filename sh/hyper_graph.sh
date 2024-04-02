@@ -350,3 +350,10 @@ CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_ce_v3.py  --configName cl_0221_b
 # cl_weight = 0
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_ce_v3.py --configName cl_0221_best --save_path ./models/bkms_v3_filter_simple_score_2 --init /home/skl/yl/ce_project/relation_cl/models/models/bkms_v3_filter_simple_score_2/hit10/ &
 
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_01 --save_path ./models/breada_hyperedge_complex_01 &
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_02 --save_path ./models/breada_hyperedge_complex_02 &
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_complex_03 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_04 &

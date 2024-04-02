@@ -154,26 +154,33 @@ class ReactionTrainer(object):
         negative_score = model.full_score(head,head_index,tail,tail_index,negative_sample)
         positive_score= model.full_score(head,head_index,tail,tail_index,relation)
         loss = loss_function(positive_score, negative_score)
-
-
-        head,tail, relation, negative_sample, head_index, tail_index,neg_index,mode = next(entity_iter)
-
-        if args.cuda:
-            head = head.cuda()
-            tail = tail.cuda()
-            relation = relation.cuda()
-            head_index = head_index.cuda()
-            tail_index = tail_index.cuda()
-            negative_sample = negative_sample.cuda()
-            neg_index = neg_index.cuda()
+        log = {}
+        log["rel_loss"] = loss.item()
         
-        positive_score= model.full_score(head,head_index,tail,tail_index,relation)
-        if mode == "hr_t":
-            negative_score = model.full_score(head,head_index,negative_sample,neg_index,relation,mode)
-        else:
-            negative_score = model.full_score(negative_sample,neg_index,tail,tail_index,relation,mode)
-        
-        entity_loss = loss_function(positive_score, negative_score)
+        if entity_iter != None:
+
+            head,tail, relation, negative_sample, head_index, tail_index,neg_index,mode = next(entity_iter)
+
+            if args.cuda:
+                head = head.cuda()
+                tail = tail.cuda()
+                relation = relation.cuda()
+                head_index = head_index.cuda()
+                tail_index = tail_index.cuda()
+                negative_sample = negative_sample.cuda()
+                neg_index = neg_index.cuda()
+            
+            positive_score= model.full_score(head,head_index,tail,tail_index,relation)
+            if mode == "hr_t":
+                negative_score = model.full_score(head,head_index,negative_sample,neg_index,relation,mode)
+            else:
+                negative_score = model.full_score(negative_sample,neg_index,tail,tail_index,relation,mode)
+            
+            entity_loss = loss_function(positive_score, negative_score)
+            loss += entity_loss
+            log = {
+            "entity loss":entity_loss.item(),
+            }
 
         regularization = 0
         if args.regularization != 0.0:
@@ -182,15 +189,11 @@ class ReactionTrainer(object):
                 model.relation_embedding.weight.data.norm(p = 3).norm(p = 3)**3
             )
             loss += regularization
-        loss += entity_loss
         loss.backward()
         optimizer.step()
-
-        log = {
-            'regularization':regularization,
-            "entity loss":entity_loss.item(),
-            'loss': loss.item()
-        }
+        log["loss"] = loss.item()
+        log["regularization"] = regularization
+      
         return log
   
     @staticmethod

@@ -1,0 +1,9 @@
+total: 8482 
+
+count 10 failed:2
+count 20 failed:2
+count 30 failed:5
+count 40 failed:7
+count 50 failed:10
+Error retrieving data from PubChem: 'PUGREST.BadRequest: error: '
+count 60 failed:11
