@@ -11,6 +11,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+import os
+
 def load_data():
 
     graph_info = torch.load("/home/tengwei/hypergraph/pre_handle_data/brenda_dataset_reaction_graph_info.pkl")
@@ -85,8 +87,9 @@ def build_graph_sampler(config):
         num_workers=max(1, 4//2),
         collate_fn=TestRelationDataset.collate_fn
     )
+    smileGraphDataset = GINPretrainDataset(c_num)
 
-    return train_dataset,valid_dataset,test_dataset,graph_info,train_info
+    return train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset
 
 
 class NagativeRelationSampleDataset(Dataset):
@@ -278,4 +281,36 @@ class CEGraphSampler(torch.utils.data.DataLoader):
 
     def __repr__(self):
         return '{}(sizes={})'.format(self.__class__.__name__, self.sizes)
+
+
+
+
+class GINPretrainDataset(Dataset):
+    def __init__(self, c_num ):
+        super(GINPretrainDataset, self).__init__()
+        self.c_num = c_num
+
+        path = "/home/tengwei/hypergraph/brenda_data/filter_data/graph/"
+        self.path_list = []
+        for i in range(c_num):
+            self.path_list.append(os.path.join(path,"graph_"+str(i)+".pt"))
+            
+    def get(self, index):
+        return self.__getitem__(index)
+
+    def len(self):
+        return len(self)
+
+    def __len__(self):
+        return self.c_num
+
+    def __getitem__(self, index):
+        graph_name = self.path_list[index]
+        # load and process graph
+        data_graph = torch.load(graph_name)
+      
+        return data_graph
+
+
+
 

@@ -14,6 +14,21 @@ from loss import *
 from core.BaseLayer import MulScoreGnn
 from core.HypergraphTransformer import HypergraphTransformer
 
+from torch_geometric.data import Batch
+from core.SmilesGnn import *
+
+from collections.abc import Mapping
+from typing import Any, List, Optional, Sequence, Union
+
+import torch.utils.data
+from torch.utils.data.dataloader import default_collate
+
+from torch_geometric.data import Batch, Dataset
+from torch_geometric.data.data import BaseData
+from torch_geometric.data.datapipes import DatasetAdapter
+from torch_geometric.typing import TensorFrame, torch_frame
+
+
 class MLPModel(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout, sigmoid_last_layer=False):
         super(MLPModel, self).__init__()
@@ -32,9 +47,36 @@ class MLPModel(torch.nn.Module):
     def forward(self, X):
         X = self.predictor(X)
         return X
+
+class Collater:
+    @staticmethod
+    def package( batch):
+        elem = batch[0]
+        if isinstance(elem, BaseData):
+            return Batch.from_data_list(
+                batch
+            )
+        elif isinstance(elem, torch.Tensor):
+            return default_collate(batch)
+        elif isinstance(elem, TensorFrame):
+            return torch_frame.cat(batch, dim=0)
+        elif isinstance(elem, float):
+            return torch.tensor(batch, dtype=torch.float)
+        elif isinstance(elem, int):
+            return torch.tensor(batch)
+        elif isinstance(elem, str):
+            return batch
+        elif isinstance(elem, Mapping):
+            return {key: Collater.package([data[key] for data in batch]) for key in elem}
+        elif isinstance(elem, tuple) and hasattr(elem, '_fields'):
+            return type(elem)(*(Collater.package(s) for s in zip(*batch)))
+        elif isinstance(elem, Sequence) and not isinstance(elem, str):
+            return [Collater.package(s) for s in zip(*batch)]
+
+        raise TypeError(f"DataLoader found invalid type: '{type(elem)}'")
     
 class HyperGraphV3(Module):
-    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None):
+    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None,config=None,NodeGnnDataset=None):
         super(HyperGraphV3, self).__init__()
 
         self.hyperkgeConfig = hyperkgeConfig
@@ -46,11 +88,18 @@ class HyperGraphV3(Module):
 
 
         self.node_emb = nn.Embedding(self.c_num+self.e_num, hidden_dim)
-
         init_range =  6.0 / math.sqrt(hidden_dim)
         nn.init.uniform_(self.node_emb.weight, -init_range, init_range)
 
         self.dropout = torch.nn.Dropout(p=0.5)
+        self.node_encoder = GNN(
+            num_layer=config["node_gnn_layer"],
+            emb_dim=hidden_dim,
+            gnn_type='gin',
+            drop_ratio=config["node_gnn_dropout"],
+            JK='last',
+        )
+        self.NodeGnnDataset= NodeGnnDataset
 
         self.fc1 = torch.nn.Sequential(
             torch.nn.Linear(hyperkgeConfig.embedding_dim * 2, hyperkgeConfig.embedding_dim),
@@ -68,19 +117,28 @@ class HyperGraphV3(Module):
         stdv = 1.0 / math.sqrt(self.emb_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
-
-  
-
    
 
     def reg_l2(self):
         return torch.mean(torch.norm(self.node_emb.weight,dim=-1))
 
 
+
+    def get_base_emb(self, nids):
+      
+        batch = []
+        for i in range(len(nids)):
+            batch.append(self.NodeGnnDataset.get(nids[i]))
+        batch = Collater.package(batch)
+        batch_node = self.node_encoder(batch)
+        return batch_node
+
     def single_emb(self, data):
         n_id, adjs, split_idx = data
-        n_id = n_id.cuda()
-        x = self.node_emb(n_id[split_idx:])
+        # n_id = n_id.cuda()
+        n_id = n_id[split_idx:]
+        # x = self.node_emb(n_id[split_idx:])
+        x = self.get_base_emb(n_id)
         hyper_edge_emb = self.encoder(n_id,x, adjs,split_idx, True)
         return hyper_edge_emb
 

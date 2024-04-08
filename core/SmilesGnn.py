@@ -266,9 +266,16 @@ class GNN(torch.nn.Module):
     def forward(self, *argv):
         if len(argv) == 3:
             x, edge_index, edge_attr = argv[0], argv[1], argv[2]
+            x = x.cuda()
+            edge_index = edge_index.cuda()
+            edge_attr = edge_attr.cuda()
         elif len(argv) == 1:
             data = argv[0]
             x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+            x = x.cuda() 
+            edge_index = edge_index.cuda()
+            edge_attr = edge_attr.cuda()
+            batch = batch.cuda()
         else:
             raise ValueError("unmatched number of arguments.")
 
@@ -297,18 +304,18 @@ class GNN(torch.nn.Module):
         elif self.JK == "sum":
             h_list = [h.unsqueeze_(0) for h in h_list]
             node_representation = torch.sum(torch.cat(h_list, dim=0), dim=0)[0]
-        
-
+      
         h_graph = self.pool(node_representation, batch) # shape = [B, D]
-        batch_node, batch_mask = to_dense_batch(node_representation, batch) # shape = [B, n_max, D], 
-        batch_mask = batch_mask.bool()
+        return h_graph
+        # batch_node, batch_mask = to_dense_batch(node_representation, batch) # shape = [B, n_max, D], 
+        # batch_mask = batch_mask.bool()
 
-        if self.cat_grep:
-            batch_node = torch.cat((h_graph.unsqueeze(1), batch_node), dim=1) # shape = [B, n_max+1, D]
-            batch_mask = torch.cat([torch.ones((batch_mask.shape[0], 1), dtype=torch.bool, device=batch.device), batch_mask], dim=1)
-            return batch_node, batch_mask
-        else:
-            return batch_node, batch_mask, h_graph
+        # if self.cat_grep:
+        #     batch_node = torch.cat((h_graph.unsqueeze(1), batch_node), dim=1) # shape = [B, n_max+1, D]
+        #     batch_mask = torch.cat([torch.ones((batch_mask.shape[0], 1), dtype=torch.bool, device=batch.device), batch_mask], dim=1)
+        #     return batch_node, batch_mask
+        # else:
+        #     return batch_node, batch_mask, h_graph
 
 
 class GNN_graphpred(torch.nn.Module):
