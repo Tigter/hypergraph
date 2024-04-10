@@ -81,17 +81,37 @@ def update_text(cid):
                     flag = True
                     with open(f'./text/text_{cid}.txt', 'w', encoding='utf-8') as f:
                         f.writelines(text)
+
+# count = 0
+# for i in range(100, 8500, 100):
+#     file_name = "./pub_result/pubchempy_mapping_" + str(i) + ".json"
+#     with open(file_name,"r") as f:
+#         datas = json.load(f)
+#     for data in datas:
+#         count += 1
+#         cid = data[1]
+#         update_text(cid)
+#         if count % 100 == 0:
+#             print("finished count:%d" % count)
         
-    
+
+
+name2id = {}
+with open("./reaction_entity.dict") as f:
+    lines = f.readlines()
+    for line in lines:
+        name, temp_id = line.strip().split("\t")
+        name2id[name] = int(temp_id)
+id2cid = {}
 count = 0
+
 for i in range(100, 8500, 100):
     file_name = "./pub_result/pubchempy_mapping_" + str(i) + ".json"
     with open(file_name,"r") as f:
         datas = json.load(f)
     for data in datas:
-        count += 1
         cid = data[1]
-        update_text(cid)
-        if count % 100 == 0:
-            print("finished count:%d" % count)
-        
+        id2cid[name2id[data[0]]] = cid
+
+with open("./id2cid.json","w") as f:
+    json.dump(id2cid, f)

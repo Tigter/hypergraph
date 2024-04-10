@@ -27,7 +27,7 @@ from torch_geometric.data import Batch, Dataset
 from torch_geometric.data.data import BaseData
 from torch_geometric.data.datapipes import DatasetAdapter
 from torch_geometric.typing import TensorFrame, torch_frame
-
+from lavis.models.blip2_models.Qformer import BertConfig, BertLMHeadModel
 
 class MLPModel(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout, sigmoid_last_layer=False):
@@ -72,16 +72,17 @@ class Collater:
             return type(elem)(*(Collater.package(s) for s in zip(*batch)))
         elif isinstance(elem, Sequence) and not isinstance(elem, str):
             return [Collater.package(s) for s in zip(*batch)]
-
         raise TypeError(f"DataLoader found invalid type: '{type(elem)}'")
     
 class HyperGraphV3(Module):
-    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None,config=None,NodeGnnDataset=None):
+    def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None,config=None,NodeGnnDataset=None,clDataset=None):
         super(HyperGraphV3, self).__init__()
 
         self.hyperkgeConfig = hyperkgeConfig
         self.encoder = HyperCE(hyperkgeConfig,n_node,n_hyper_edge,e_num,graph_info)
         hidden_dim = hyperkgeConfig.embedding_dim
+
+        self.entity_dim = hyperkgeConfig.embedding_dim
       
         self.c_num = graph_info["c_num"]
         self.e_num = graph_info["e_num"]
@@ -100,6 +101,9 @@ class HyperGraphV3(Module):
             JK='last',
         )
         self.NodeGnnDataset= NodeGnnDataset
+        self.clDataset = clDataset
+
+        self.text_proj = nn.Linear(768,  hyperkgeConfig.embedding_dim)
 
         self.fc1 = torch.nn.Sequential(
             torch.nn.Linear(hyperkgeConfig.embedding_dim * 2, hyperkgeConfig.embedding_dim),
@@ -109,10 +113,26 @@ class HyperGraphV3(Module):
             torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
             torch.nn.Sigmoid()
         )
-        
-
+        bert_name = 'allenai/scibert_scivocab_uncased'
+        encoder_config = BertConfig.from_pretrained(bert_name)
+        encoder_config.encoder_width = hidden_dim
+        # insert cross-attention layer every other block
+        encoder_config.add_cross_attention = True
+        encoder_config.cross_attention_freq = 2
+        # encoder_config.query_length = num_query_token
+        self.Qformer = BertLMHeadModel.from_pretrained(
+            bert_name, config=encoder_config
+        )
         self.loss_funcation = nn.BCELoss()
 
+        self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.entity_dim,self.entity_dim)),dtype=torch.float))
+
+        self.input_dropout = torch.nn.Dropout(0.5)
+        self.hidden_dropout1 = torch.nn.Dropout(0.5)
+        self.hidden_dropout2 = torch.nn.Dropout(0.5)
+
+        self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
     def init_parameters(self):
         stdv = 1.0 / math.sqrt(self.emb_size)
         for weight in self.parameters():
@@ -125,7 +145,6 @@ class HyperGraphV3(Module):
 
 
     def get_base_emb(self, nids):
-      
         batch = []
         for i in range(len(nids)):
             batch.append(self.NodeGnnDataset.get(nids[i]))
@@ -133,12 +152,34 @@ class HyperGraphV3(Module):
         batch_node = self.node_encoder(batch)
         return batch_node
 
+    def train_cl(self):
+        graph_data,text_data,txt_mask = next(self.clDataset)
+        batch_node = self.node_encoder(graph_data)
+        text_data=text_data.cuda()
+        txt_mask=txt_mask.cuda()
+
+        text_output = self.Qformer.bert(text_data, attention_mask=txt_mask, return_dict=True) 
+        text_emb = self.text_proj(text_output.last_hidden_state[:, 0, :])
+
+        text_feats, graph_feats = F.normalize(text_emb, p=2, dim=-1), F.normalize(batch_node, p=2, dim=-1)
+
+        return self.caculate_cl_loss(text_feats, graph_feats)
+
+    def caculate_cl_loss(self, single_emb, double_emb):
+
+        score = single_emb @ double_emb.transpose(0,1)
+        batch_size = len(single_emb)
+        pos_score = score[range(batch_size), range(batch_size)]
+        neg_score = (score.sum(dim=1) - pos_score)
+        con_loss = torch.sum(-torch.log(1e-8 + torch.sigmoid(pos_score))-torch.log(1e-8 + (1 - torch.sigmoid(neg_score))))
+        return con_loss
+
     def single_emb(self, data):
         n_id, adjs, split_idx = data
-        # n_id = n_id.cuda()
-        n_id = n_id[split_idx:]
-        # x = self.node_emb(n_id[split_idx:])
-        x = self.get_base_emb(n_id)
+        n_id = n_id.cuda()
+        # n_id = n_id[split_idx:]
+        x = self.node_emb(n_id[split_idx:])
+        # x = self.get_base_emb(n_id)
         hyper_edge_emb = self.encoder(n_id,x, adjs,split_idx, True)
         return hyper_edge_emb
 
@@ -153,7 +194,8 @@ class HyperGraphV3(Module):
 
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
-        return self.complex_score(head_emb, relation_emb, tail_emb)
+        
+        return self.tucker_score(head_emb, relation_emb, tail_emb)
 
     def complex_score(self, head, relation, tail):
         head_re, head_im = head.chunk(2, -1)               # (batch,1,dim), (batch,n,dim),  (1,n_e,dim)
@@ -165,6 +207,40 @@ class HyperGraphV3(Module):
         result = score_re * tail_re + score_im * tail_im
         score = torch.sum(result,dim=-1)
         return score
+
+    def tucker_score(self, head, relation, tail):
+        batch_size = relation.shape[0]
+        
+        head = head.reshape(-1, self.entity_dim)
+        x = self.bn0(head)
+        x = self.input_dropout(x)
+        x = x.reshape(batch_size, -1, self.entity_dim)
+
+        print(x.shape)
+        # 核心张量与关系做x2 乘积
+        relation = relation.reshape(-1, self.entity_dim)
+        print(relation.shape)
+
+        W_mat = torch.mm(relation, self.W.reshape(self.entity_dim, -1))
+        W_mat = W_mat.reshape(-1, self.entity_dim, self.entity_dim)
+        W_mat = self.hidden_dropout1(W_mat)                     # shape = (batch_size, e_dim, e_dim)
+        
+        x = torch.bmm(x, W_mat)                                 # shape = (batch_size, n, e_dim)
+
+        x = x.reshape(-1, self.entity_dim)      
+        x = self.bn1(x)
+        x = self.hidden_dropout2(x)                             # shape = (batch_size*n, e_dim)
+
+        # 然后根据tail的形状进行计算: (batch_size, n, e_dim) or （1 , n_entity, e_dim)
+        if tail.shape[0] == batch_size:
+            x = x.reshape(batch_size, -1, self.entity_dim) # shape = (batch_size, n, e_dim)
+            x = torch.bmm(x,tail.permute(0,2,1)) # result(batch_size, n, 1)
+        else:
+            tail = tail.reshape(-1,self.entity_dim)
+            x = torch.mm(x, tail.permute(1,0))
+        if len(x.shape) > 2:
+            x = torch.squeeze(x)
+        return x
     
     @staticmethod
     def train_step(model,optimizer,data,loss_funcation, config=None):
@@ -188,6 +264,11 @@ class HyperGraphV3(Module):
             # "ec_loss": loss_ec.item(),
             # "ko_loss": loss_enzyme_ko.item()
         }
+
+        # cl loss
+        # cl_loss = model.train_cl()
+        # logs["cl_loss"] = cl_loss.item()
+        # loss += cl_loss
 
         if config["reg_weight"] != 0.0:
             reg = model.reg_l2()

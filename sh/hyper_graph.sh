@@ -361,3 +361,9 @@ CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName 
 CUDA_VISIBLE_DEVICES=0 python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_add_smiles_debug
 
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_add_smiles_debug_01 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_smile2_text_debug &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_01 --save_path ./models/breada_hyperedge_tucker_01 &

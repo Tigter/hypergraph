@@ -1,5 +1,3 @@
-import copy
-from typing import List, Optional, Tuple, NamedTuple, Union, Callable
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -12,6 +10,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import os
+import json
+from torch_geometric.loader.dataloader import Collater
+from transformers import BertTokenizer
 
 def load_data():
 
@@ -19,37 +20,12 @@ def load_data():
     train_info = torch.load("/home/tengwei/hypergraph/pre_handle_data/brenda_dataset_reaction_train_info.pkl")
     return graph_info, train_info
 
-    sing_graph = {
-        "train_edge_index": edge_index_train,
-        "train_edge_type": edge_type_train,
-
-        "valid_edge_index": new_edge_index,
-        "valid_edge_type": new_edge_type,
-
-        "v2e_all_index": v2e_all_index,
-        "v2e_train_index": v2e_train_index,
-        "e2v_all_index": e2v_all_index,
-        "max_edge_id":edge_start_id + hyedge_num,
-        "base_node_num":edge_start_id,
-        "clist2edgeId":clist2edgeId
-    }
-    train_info = {
-        "train_id_list": train_id_list,
-        "valid_id_list": valid_id_list,
-        "test_id_list": test_id_list,
-
-        "train_triple": train_triples,
-        "valid_triple": valid_triples,
-        "test_triple": test_triples,     
-        # "edgeid2label": Hy2E,
-    }
 def build_graph_sampler(config):
     graph_info, train_info = load_data()
     base_node_num = graph_info["base_node_num"]
 
     c_num, e_num = graph_info["c_num"],graph_info["e_num"]
     e2id, e_num = graph_info["e2id"],graph_info["e_num"]
-
 
     n_hyedge = len(graph_info["clist2edgeId"])
 
@@ -88,11 +64,22 @@ def build_graph_sampler(config):
         collate_fn=TestRelationDataset.collate_fn
     )
     smileGraphDataset = GINPretrainDataset(c_num)
+    bert_name = 'allenai/scibert_scivocab_uncased'
+    tokenizer = BertTokenizer.from_pretrained(bert_name)
+    # add tokenizer 
+    clDataset =OneShotIterator(DataLoader(
+     NodeEmbeddingClDataset(c_num),
+        batch_size=128,
+        shuffle=True, 
+        num_workers=max(1, 4//2),
+        collate_fn=TrainCollater(tokenizer, 200)
+    ))
 
-    return train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset
+    return train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset,clDataset
 
 
 class NagativeRelationSampleDataset(Dataset):
+
     def __init__(self, triples, nentity, nrelation, negative_sample_size, graph_sampler, e_num):
 
         self.len = len(triples)
@@ -105,6 +92,9 @@ class NagativeRelationSampleDataset(Dataset):
         self.true_realtion = self.get_true_head_and_tail(self.triple_set, e_num)
         self.graph_sampler = graph_sampler
         self.e_num = e_num
+
+    def __len__(self):
+        return self.len
 
     def __len__(self):
         return self.len
@@ -283,8 +273,6 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         return '{}(sizes={})'.format(self.__class__.__name__, self.sizes)
 
 
-
-
 class GINPretrainDataset(Dataset):
     def __init__(self, c_num ):
         super(GINPretrainDataset, self).__init__()
@@ -311,6 +299,76 @@ class GINPretrainDataset(Dataset):
       
         return data_graph
 
+class NodeEmbeddingClDataset(Dataset):
+    def __init__(self, c_num ):
+        super(NodeEmbeddingClDataset, self).__init__()
+        self.c_num = c_num
+        path = "/home/tengwei/hypergraph/brenda_data/filter_data/id2cid.json"
+        with open(path) as f:
+            id2cid = json.load(f)
+        self.graph_path = "/home/tengwei/hypergraph/brenda_data/filter_data/graph/"
+        self.text_path  = "/home/tengwei/hypergraph/brenda_data/filter_data/text/"
+
+        self.datalist = []
+        for id,cid in id2cid.items():
+            text_file = os.path.join(self.text_path,"text_%s.txt"% str(cid))
+            if os.path.exists(text_file):
+                self.datalist.append((id,cid))
 
 
 
+
+    def get(self, index):
+        return self.__getitem__(index)
+
+    def len(self):
+        return len(self.datalist)
+
+    def __len__(self):
+        return len(self.datalist)
+
+    def __getitem__(self, index):
+
+        graph_name =os.path.join(self.graph_path,"graph_%s.pt"% str(self.datalist[index][0]))
+        data_graph = torch.load(graph_name)
+
+        text_file = os.path.join(self.text_path,"text_%s.txt"% str(self.datalist[index][1]))
+        with open(text_file,"r") as f:
+            lines = f.readlines()
+            line = "\n".join(lines)
+
+        return data_graph, line
+
+
+
+
+class TrainCollater(object):
+    def __init__(self, tokenizer, text_max_len):
+        self.tokenizer = tokenizer
+        self.graph_collector = Collater([], [])
+        self.text_max_len = text_max_len
+    
+    def __call__(self, batch):
+        graph_list = [_[0] for _ in batch]
+        text_list = [_[1] for _ in batch]
+        graph_batch = self.graph_collector(graph_list)       
+        text_batch = self.tokenizer(text_list, padding='max_length', truncation=True, max_length=self.text_max_len, return_tensors='pt')
+        return graph_batch, text_batch.input_ids, text_batch.attention_mask
+
+
+class OneShotIterator(object):
+    def __init__(self, dataloader):
+        self.dataloader = self.one_shot_iterator(dataloader)
+ 
+    def __next__(self):
+        data = next(self.dataloader)
+        return data
+    
+    @staticmethod
+    def one_shot_iterator(dataloader):
+        '''
+        Transform a PyTorch Dataloader into python iterator
+        '''
+        while True:
+            for data in dataloader:
+                yield data

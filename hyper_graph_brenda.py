@@ -233,7 +233,7 @@ if __name__=="__main__":
         logset.set_logger(root_path,'test.log')
     
     # 读取数据集
-    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset = build_graph_sampler(modelConfig)
+    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset, clDataset = build_graph_sampler(modelConfig)
     
     logging.info('build trainning dataset....')
     base_loss_funcation = nn.CosineEmbeddingLoss(margin=modelConfig['margin'])
@@ -246,7 +246,7 @@ if __name__=="__main__":
     n_node = graph_info['base_node_num']
     help_data = None
 
-    model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info,config=modelConfig,NodeGnnDataset=smileGraphDataset)
+    model = HyperGraphV3(hyperkgeConfig=hyperConfig,n_node=n_node, n_hyper_edge=graph_info["max_edge_id"]-n_node,e_num=graph_info['e_num'],graph_info=graph_info,config=modelConfig,NodeGnnDataset=smileGraphDataset,clDataset=clDataset)
     
     if cuda:
         model = model.cuda()
