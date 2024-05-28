@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from torch_scatter import scatter_mean
 from torch_geometric.nn import aggr
+import numpy as np  
 class ComplEx(nn.Module):
     def __init__(self, n_entity, n_relation, dim, gamma=12,p_norm=1):
         super(ComplEx,self).__init__()
@@ -10,10 +12,18 @@ class ComplEx(nn.Module):
         self.n_entity = n_entity
         self.n_relation = n_relation
         self.epsilon = 2
-        self.entity_dim = dim*2
-        self.relation_dim = dim
+        self.entity_dim = dim
+        self.relation_dim = dim*2
         self.entity_embedding = nn.Embedding(n_entity, self.entity_dim)
         self.relation_embedding = nn.Embedding(n_relation,self.relation_dim)
+
+        # self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.relation_dim,self.entity_dim)),dtype=torch.float))
+        # self.input_dropout = torch.nn.Dropout(0.5)
+        # self.hidden_dropout1 = torch.nn.Dropout(0.5)
+        # self.hidden_dropout2 = torch.nn.Dropout(0.5)
+
+        # self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
+        # self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
 
         self.aggr = aggr.AttentionalAggregation(
             torch.nn.Sequential(
@@ -94,11 +104,18 @@ class ComplEx(nn.Module):
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
         
-        return self.rotate_function(head_emb, relation, tail_emb)
+        return self.paire_score(head_emb, relation, tail_emb)
 
+
+    def paire_score(self, head, relation, tail):
+        re_head, re_tail= torch.chunk(relation, 2, dim=-1)
+
+        head = F.normalize(head, 2, -1)
+        tail = F.normalize(tail, 2, -1)
        
-
-
+        score = head * re_head - tail * re_tail
+        score = - torch.norm(score, p=1, dim=2)
+        return score
     def complex_score(self, head, relation, tail):
         head_re, head_im = head.chunk(2, -1)               # (batch,1,dim), (batch,n,dim),  (1,n_e,dim)
         relation_re, relation_im = relation.chunk(2, -1)   # (batch,1,dim)
@@ -140,3 +157,33 @@ class ComplEx(nn.Module):
         score = score.norm(dim = 0)
         score =  - score.sum(dim = 2)
         return score
+
+    def tucker_score(self, head, relation, tail):
+        batch_size = head.shape[0]
+        
+        head = head.reshape(-1, self.entity_dim)
+        x = self.bn0(head)
+        x = self.input_dropout(x)
+        x = x.reshape(batch_size, -1, self.entity_dim)
+
+        # 核心张量与关系做x2 乘积
+        tail = tail.reshape(-1, self.entity_dim)
+        W_mat = torch.mm(tail, self.W.reshape(self.entity_dim, -1))
+        W_mat = W_mat.reshape(-1, self.entity_dim, self.entity_dim)
+        W_mat = self.hidden_dropout1(W_mat)                     # shape = (batch_size, e_dim, e_dim)
+        x = torch.bmm(x, W_mat)                                 # shape = (batch_size, n, e_dim)
+
+        x = x.reshape(-1, self.entity_dim)      
+        x = self.bn1(x)
+        x = self.hidden_dropout2(x)                             # shape = (batch_size*n, e_dim)
+
+        # 然后根据tail的形状进行计算: (batch_size, n, e_dim) or （1 , n_entity, e_dim)
+        if relation.shape[0] == batch_size:
+            x = x.reshape(batch_size, -1, self.entity_dim) # shape = (batch_size, n, e_dim)
+            x = torch.bmm(x,relation.permute(0,2,1)) # result(batch_size, n, 1)
+        else:
+            tail = tail.reshape(-1,self.entity_dim)
+            x = torch.mm(x, relation.permute(1,0))
+        if len(x.shape) > 2:
+            x = torch.squeeze(x)
+        return x

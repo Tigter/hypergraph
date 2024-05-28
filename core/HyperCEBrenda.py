@@ -14,6 +14,9 @@ from torch_scatter import scatter
 from torch_geometric.utils import softmax
 
 from core.HypergraphTransformer import HypergraphTransformer
+# from core.SimpleGnn import HypergraphTransformer
+
+
 class HyperKGEConfig:
     dropout = 0
     num_layers= 2

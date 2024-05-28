@@ -1,13 +1,14 @@
 nohup.out
 __pycache__
 */__pycache__
-# *.txt
-# *.json
+*.txt
+*.json
 models/*
 *.log
 pre_handle_data/*
-# *.pkl
+*.pkl
 brenda_data/filter_data/pub_result/*
 brenda_data/filter_data/graph/*
 brenda_data/filter_data/text/*
-
+core/mollm/*
+/checkpoint/*

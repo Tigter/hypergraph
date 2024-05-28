@@ -17,6 +17,7 @@ from core.HypergraphTransformer import HypergraphTransformer
 from torch_geometric.data import Batch
 from core.SmilesGnn import *
 
+from core.SmileTransformer import *
 from collections.abc import Mapping
 from typing import Any, List, Optional, Sequence, Union
 
@@ -48,31 +49,31 @@ class MLPModel(torch.nn.Module):
         X = self.predictor(X)
         return X
 
-class Collater:
-    @staticmethod
-    def package( batch):
-        elem = batch[0]
-        if isinstance(elem, BaseData):
-            return Batch.from_data_list(
-                batch
-            )
-        elif isinstance(elem, torch.Tensor):
-            return default_collate(batch)
-        elif isinstance(elem, TensorFrame):
-            return torch_frame.cat(batch, dim=0)
-        elif isinstance(elem, float):
-            return torch.tensor(batch, dtype=torch.float)
-        elif isinstance(elem, int):
-            return torch.tensor(batch)
-        elif isinstance(elem, str):
-            return batch
-        elif isinstance(elem, Mapping):
-            return {key: Collater.package([data[key] for data in batch]) for key in elem}
-        elif isinstance(elem, tuple) and hasattr(elem, '_fields'):
-            return type(elem)(*(Collater.package(s) for s in zip(*batch)))
-        elif isinstance(elem, Sequence) and not isinstance(elem, str):
-            return [Collater.package(s) for s in zip(*batch)]
-        raise TypeError(f"DataLoader found invalid type: '{type(elem)}'")
+# class Collater:
+#     @staticmethod
+#     def package( batch):
+#         elem = batch[0]
+#         if isinstance(elem, BaseData):
+#             return Batch.from_data_list(
+#                 batch
+#             )
+#         elif isinstance(elem, torch.Tensor):
+#             return default_collate(batch)
+#         elif isinstance(elem, TensorFrame):
+#             return torch_frame.cat(batch, dim=0)
+#         elif isinstance(elem, float):
+#             return torch.tensor(batch, dtype=torch.float)
+#         elif isinstance(elem, int):
+#             return torch.tensor(batch)
+#         elif isinstance(elem, str):
+#             return batch
+#         elif isinstance(elem, Mapping):
+#             return {key: Collater.package([data[key] for data in batch]) for key in elem}
+#         elif isinstance(elem, tuple) and hasattr(elem, '_fields'):
+#             return type(elem)(*(Collater.package(s) for s in zip(*batch)))
+#         elif isinstance(elem, Sequence) and not isinstance(elem, str):
+#             return [Collater.package(s) for s in zip(*batch)]
+#         raise TypeError(f"DataLoader found invalid type: '{type(elem)}'")
     
 class HyperGraphV3(Module):
     def __init__(self, hyperkgeConfig=None,n_node=0,n_hyper_edge=0,e_num=100,graph_info=None,config=None,NodeGnnDataset=None,clDataset=None):
@@ -100,6 +101,7 @@ class HyperGraphV3(Module):
             drop_ratio=config["node_gnn_dropout"],
             JK='last',
         )
+       
         self.NodeGnnDataset= NodeGnnDataset
         self.clDataset = clDataset
 
@@ -241,7 +243,7 @@ class HyperGraphV3(Module):
         if len(x.shape) > 2:
             x = torch.squeeze(x)
         return x
-    
+    #  2.1.0
     @staticmethod
     def train_step(model,optimizer,data,loss_funcation, config=None):
         optimizer.zero_grad()

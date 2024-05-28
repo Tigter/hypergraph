@@ -46,14 +46,14 @@ def trans2id(train_data, entity_dict,relation_dict ):
 
 def load_data():
 
-    with open("/home/tengwei/hypergraph/brenda_data/filter_data/train_reaction.json") as f:
+    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/train_reaction.json") as f:
         train_data = json.load(f)
-    with open("/home/tengwei/hypergraph/brenda_data/filter_data/valid_reaction.json") as f:
+    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_valid.json") as f:
         valid_data = json.load(f)
-    with open("/home/tengwei/hypergraph/brenda_data/filter_data/test_reaction.json") as f:
+    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_test.json") as f:
         test_data = json.load(f)
     
-    with open("/home/tengwei/hypergraph/brenda_data/filter_data/reaction_entity.dict") as f:
+    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/reaction_entity.dict") as f:
         datas = f.readlines()
         entity_dict = {}
         for line in datas:
@@ -62,7 +62,7 @@ def load_data():
             value = int(value.strip())
             entity_dict[key] = value
 
-    with open("/home/tengwei/hypergraph/brenda_data/filter_data/reaction_relation.dict") as f:
+    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/reaction_relation.dict") as f:
         datas = f.readlines()
         relation_dict = {}
         for line in datas:

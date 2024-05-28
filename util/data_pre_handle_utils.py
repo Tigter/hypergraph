@@ -162,6 +162,7 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
     clist2edgeId = dict()
 
     edge_id = edge_start_id
+    
     train_triples, single_train, clist2edgeId, edge_id = transe_single2id(train_data, e2id, clist2edgeId,edge_id)
     valid_triples, single_valid, clist2edgeId, edge_id = transe_single2id(valid_data, e2id, clist2edgeId,edge_id)
 
@@ -174,7 +175,6 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
 
     train_id_list, train_c2Hy_index, train_e2Hy_index, Hy2E = build_hyedge(single_train, c2id, e2id,clist2edgeId)
     # print("train hyper edge number: %d" % train_hyper_edge_num)
-
     valid_id_list, valid_c2Hy_index, valid_e2Hy_index, validHy2E = build_hyedge(single_valid, c2id, e2id,clist2edgeId)
     test_id_list, test_c2Hy_index, test_e2Hy_index, testHy2E = build_hyedge(single_test, c2id, e2id,clist2edgeId)
     

@@ -12,10 +12,10 @@ import yaml
 import math
 import torch
 from torch.optim.lr_scheduler import StepLR,ReduceLROnPlateau,MultiStepLR
-from util.dataloader import OneShotIterator
+from util.dataloader import OneShotIterator,NagativeSampleDataset,BidirectionalOneShotIterator
 import torch.nn as nn
-from util.cl_dataloader import NewOne2OneDataset,CLDataset,OGOneToOneTestDataset,OgOne2OneDataset,RelationPredictDataset,RelationTestDataset
-from loss import NSSAL,MRL,NSSAL_aug,MRL_plus,NSSAL_sub
+
+from loss import NSSAL
 from util.tools import logset
 from util.model_util import ModelUtil,ModelTester
 from torch.utils.data import DataLoader
@@ -29,7 +29,7 @@ import torch.nn.functional as F
 
 from util.brenda_datasets import *
 import random
-from core.HyperGraphBrenda import HyperGraphV3
+from core.HyperGraphBrenda20 import HyperGraphV3
 from core.HyperCEBrenda import HyperKGEConfig 
 
 import pickle
@@ -104,38 +104,6 @@ def get_parameter_number(net):
     return {'Total': total_num, 'Trainable': trainable_num}
 
 
-def test_inductive(model, sampler):
-   
-    logs = []
-    count = 0
-    for data in sampler:
-        count += 1
-        if count % 400 == 0:
-            print("test step count: %d" % count)
-
-      
-        score, label = model.lable_predict_base(data,mode="test")
-        # score = score[:,1:]
-        # score = score.squeeze(-1)
-        argsort = torch.argsort(score, dim = 1, descending=True)
-
-        for i in range(score.shape[0]):
-            ranking = (argsort[i, :] == label[i]).nonzero()
-            assert ranking.size(0) == 1
-            ranking = 1 + ranking.item()
-            logs.append({
-                'MRR': 1.0/ranking,
-                'MR': float(ranking),
-                'HITS@1': 1.0 if ranking <= 1 else 0.0,
-                'HITS@3': 1.0 if ranking <= 3 else 0.0,
-                'HITS@10': 1.0 if ranking <= 10 else 0.0,
-            })
-
-    metrics = {}
-    for metric in logs[0].keys():
-        metrics[metric] = sum([log[metric] for log in logs])/len(logs)
-    return metrics
-
 def setup_seed(seed):
      torch.manual_seed(seed)
      torch.cuda.manual_seed_all(seed)
@@ -166,6 +134,7 @@ def test_step_function(model, test_dataset, args, loss_function=None):
                     filter_bias = filter_bias.cuda()
                 
                 negative_score = model.full_score(head_emb, negative_sample,tail_emb)
+                if negative_score == None: continue
                 score = negative_score + filter_bias
                 argsort = torch.argsort(score, dim = 1, descending=True)
                 positive_arg = relation
@@ -185,9 +154,42 @@ def test_step_function(model, test_dataset, args, loss_function=None):
                     logging.info('Evaluating the model... (%d/%d)' % (step, total_steps))
                 step += 1
         metrics = {}
+       
+
         for metric in logs[0].keys():
             metrics[metric] = sum([log[metric] for log in logs])/len(logs)
+        metrics["total step"] = total_steps
         return metrics
+
+def build_aux_dataset():
+    with open("./brenda_data/filter_data/ec_data/subclass.json") as f:
+        subTriples = json.load(f)
+
+    with open("./brenda_data/filter_data/ec_data/typeof.json") as f:
+        typeof = json.load(f)
+    
+    on_train_t = DataLoader(NagativeSampleDataset(subTriples, 5406, 1, 1000, 'hr_t'),
+            batch_size=256,
+            shuffle=True, 
+            num_workers=max(1, 4//2),
+            collate_fn=NagativeSampleDataset.collate_fn
+    )
+    on_train_h = DataLoader(NagativeSampleDataset(subTriples, 5406, 1, 1000, 'h_rt'),
+            batch_size=256,
+            shuffle=True, 
+            num_workers=max(1, 4//2),
+            collate_fn=NagativeSampleDataset.collate_fn
+        )
+    on_train_iterator = BidirectionalOneShotIterator(on_train_h, on_train_t)
+
+    typedataset = DataLoader(NagativeSampleDataset(typeof, 0, 1, n_size, 'hr_t',6924,5406),
+            batch_size=256,
+            shuffle=True, 
+            num_workers=max(1, 4//2),
+            collate_fn=NagativeSampleDataset.collate_fn
+    )
+    typedataset = OneShotIterator(typedataset)
+    return on_train_iterator, typedataset
 
 if __name__=="__main__":
     # 读取4个数据集
@@ -233,12 +235,17 @@ if __name__=="__main__":
         logset.set_logger(root_path,'test.log')
     
     # 读取数据集
-    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset, clDataset = build_graph_sampler(modelConfig)
-    
+    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset, clDataset,train_test = build_graph_sampler(modelConfig)
+    subClassOf, typeOf = build_aux_dataset()
     logging.info('build trainning dataset....')
-    base_loss_funcation = nn.CosineEmbeddingLoss(margin=modelConfig['margin'])
+    # base_loss_funcation = nn.CosineEmbeddingLoss(margin=modelConfig['margin'])
 
     base_loss_funcation = NSSAL(gamma=modelConfig["gamma"], plus_gamma=False)
+    sub_loss_function = NSSAL(gamma=modelConfig["gamma_s"], plus_gamma=True)
+    type_loss_function = NSSAL(gamma=modelConfig["gamma_t"], plus_gamma=True)
+
+
+
     hyperConfig = HyperKGEConfig()
     hyperConfig.embedding_dim = modelConfig['dim']
     hyperConfig.conv_args_conv_dropout_rate = modelConfig['dropout']
@@ -250,20 +257,34 @@ if __name__=="__main__":
     
     if cuda:
         model = model.cuda()
-       
+    # model.init_node_embedding()
+    # model.node_emb = model.node_emb.detach()
+
+    # for name,param in model.named_parameters():
+    #     print(name)
+    typeEmb = [param for name,param in model.named_parameters() if name == 'box.init_tensor' or  name =='box.trans_emb.weight']
+    otherEmb = [param for name,param in model.named_parameters() if name != 'box.init_tensor' and name != 'box.trans_emb.weight']
+   
     optimizer = torch.optim.Adam([
-        {
-            'params':filter(lambda p: p.requires_grad, model.parameters())
+       {
+         'params':filter(lambda p: p.requires_grad , typeEmb), 
+         'lr': modelConfig['box_lr']
         },
+        {
+         'params':filter(lambda p: p.requires_grad , otherEmb), 
+         'lr': lr
+        }
         ], lr=lr,
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))
     # 如果-有保-存模-型则，读取-模型,进行-测试
+    # init_path = "/home/skl/yl/ce_project/relation_cl/models/models/breada_hyperedge_complex_transformer_clean_01/hit10"
+    # init_path ="/home/skl/yl/ce_project/relation_cl/models/models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_05/hit1"
     if init_path != None:
         logging.info('init: %s' % init_path)
         checkpoint = torch.load(os.path.join(init_path, 'checkpoint'))
-        model.load_state_dict(checkpoint['model_state_dict'],strict=False)
+        model.load_state_dict(checkpoint['model_state_dict'],strict=True)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         lr = optimizer.state_dict()['param_groups'][0]['lr']
         init_step = checkpoint['step']
@@ -276,7 +297,7 @@ if __name__=="__main__":
     logging.info('lr: %s' % lr)
 
     # 设置学习率更新策略
-    lr_scheduler = MultiStepLR(optimizer,milestones=[5000], gamma=decay)
+    lr_scheduler = MultiStepLR(optimizer,milestones=[3000], gamma=decay)
     logsInstance = []
     logsTypeOf= []
     logsSubOf = []
@@ -288,7 +309,8 @@ if __name__=="__main__":
         "MR":1000000000,
         "HITS@1":0,
         "HITS@3":0,
-        "HITS@10":0
+        "HITS@10":0,
+        "Mix":0,
     }
     baselog = []
     conf_cllog = []
@@ -304,18 +326,23 @@ if __name__=="__main__":
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
 
-            if step % test_step == 0  and step != 0:
+            if step % test_step == 0  :
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
                 # metrics = test_inductive(model,valid_sampler)
+                # metrics = test_step_function(model, train_test,modelConfig)
+                # for key in metrics:
+                #     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
+                # logset.log_metrics('Train Valid ', step, metrics)
                 metrics = test_step_function(model, valid_dataset,modelConfig)
+                metrics["Mix"] = (metrics["HITS@1"] + metrics["HITS@3"] + metrics["HITS@10"]) / 3
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ', step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in train_dataset:
-                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig)
+                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,subClassOf=subClassOf, typeOf= typeOf,subLoss=sub_loss_function,typeLoss=type_loss_function)
                 baselog.append(log)
             if step % 5 == 0:
                 logging_log(step, baselog, writer)

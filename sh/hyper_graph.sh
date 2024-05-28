@@ -355,7 +355,6 @@ CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName 
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_02 --save_path ./models/breada_hyperedge_complex_02 &
 
 
-CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_complex_03 &
 CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_04 &
 
 CUDA_VISIBLE_DEVICES=0 python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_add_smiles_debug
@@ -366,4 +365,102 @@ CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName 
 CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_smile2_text_debug &
 
 
-CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_01 --save_path ./models/breada_hyperedge_tucker_01 &
+# CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_01 --save_path ./models/breada_hyperedge_tucker_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_clean_01 &
+
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_add_aux &
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName complex_0330_03 --save_path ./models/breada_hyperedge_add_aux_complex &
+
+
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_clean_02 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_clean_04 &
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_transformer_clean_01 &
+# 换个参数的配置训练
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_cl_clean_01 &
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_real_clean_01 &
+
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_real_clean_01 &
+
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_transformer_real_clean_01 &
+
+# CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py --configName complex_0330_04 --save_path ./models/breada_hyperedge_complex_transformer_debug &
+
+dropout = 0.8
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_real_clean_02 &
+# 不work
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_real_clean_sigmoid_02 &
+
+dropout = 0.6
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_tucker_real_clean_03 &
+
+# 不 work
+CUDA_VISIBLE_DEVICES=6 python hyper_graph_brenda.py  --train --configName tucker_0410_03 --save_path ./models/breada_hyperedge_distmult_real_clean_01
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_03 --save_path ./models/breada_hyperedge_distmult_real_clean_aux_01 &
+
+CUDA_VISIBLE_DEVICES=7 python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_relation_prediction
+# 减小维度 lr = 0.001
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_05 --save_path ./models/breada_hyperedge_relation_prediction_01 &
+# lr = 0.0005 维度500 dropout = 0.8
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_07 --save_path ./models/breada_hyperedge_relation_prediction_02 &
+# lr = 0.0005 维度500  dropout=0.3
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_07 --save_path ./models/breada_hyperedge_relation_prediction_03 &
+
+# dropout=0
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_07 --save_path ./models/breada_hyperedge_relation_prediction_04 &
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_06 --save_path ./models/breada_hyperedge_relation_predictio_add_transformer_01 &
+
+# cat all score
+CUDA_VISIBLE_DEVICES=7 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_relation_prediction_with_e_01 &
+# mul score
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/breada_hyperedge_relation_prediction_with_e_02 &
+
+# 修改为margin loss
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName mul_score_0417_01 --save_path ./models/breada_hyperedge_relation_prediction_with_e_03 &
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName mul_score_0417_01 --save_path ./models/breada_hyperedge_relation_prediction_with_e_aux_03 &
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_01 --save_path ./models/breada_hyperedge_pretrain_smiles_prelation_predict_01 &
+
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_01 --save_path ./models/breada_hyperedge_pretrain_smiles_cat_predict_01 &
+
+# 冻结transormer 参数
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_01 --save_path ./models/breada_hyperedge_pretrain_smiles_prelation_predict_02  > frenze_bert_relation_predict.log &
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_01 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_02  > frenze_bert_simple_hypergraph_relation_predict.log &
+
+# 超图模型改为了gnn transformer
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_02 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_03  > frenze_bert_simple_hypergraph_relation_predict_1.log &
+
+# simple gnn
+CUDA_VISIBLE_DEVICES=5 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_02 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_04  > frenze_bert_simple_hypergraph_relation_predict_2.log &
+
+# attentin 聚合
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_03 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_05  > frenze_bert_simple_hypergraph_relation_predict_3.log &
+
+
+CUDA_VISIBLE_DEVICES=6 nohup python hyper_graph_brenda.py --train --configName mollm_0421_03_fine_tuning --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_05_fine_tuning   > frenze_bert_simple_hypergraph_relation_predict_4.log &
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py --train --configName mollm_0421_03 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_05_attention   > frenze_bert_simple_hypergraph_relation_predict_5.log &
+
+
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py --train --configName mollm_0421_03 --save_path ./models/breada_hyperedge_simple_gnn_prelation_predict > frenze_bert_simple_hypergraph_relation_predict_6_wo_transformer.log &
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName mollm_0421_03 --save_path ./models/breada_hyperedge_pretrain_smiles_simple_gnn_prelation_predict_Mix  > frenze_bert_simple_hypergraph_relation_predict_mix.log &
+
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName cl_0529_01 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl1.log &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName cl_0529_02 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl2.log &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName cl_0529_03 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl3.log &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName cl_0529_04 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl4.log &
+

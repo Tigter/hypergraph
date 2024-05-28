@@ -13,11 +13,14 @@ import os
 import json
 from torch_geometric.loader.dataloader import Collater
 from transformers import BertTokenizer
+from rdkit import Chem
+
+from util.smiles.transormer_util import *
 
 def load_data():
 
-    graph_info = torch.load("/home/tengwei/hypergraph/pre_handle_data/brenda_dataset_reaction_graph_info.pkl")
-    train_info = torch.load("/home/tengwei/hypergraph/pre_handle_data/brenda_dataset_reaction_train_info.pkl")
+    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_dataset_reaction_clean_graph_info.pkl")
+    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_dataset_reaction_clean_train_info.pkl")
     return graph_info, train_info
 
 def build_graph_sampler(config):
@@ -50,32 +53,40 @@ def build_graph_sampler(config):
     )
    
     valid_dataset = DataLoader(
-        TestRelationDataset(train_info["train_triple"],all_true_triples, n_hyedge, e_num, valid_sampler,c_num), 
+        TestRelationDataset(train_info["valid_triple"],all_true_triples, n_hyedge, e_num, valid_sampler,c_num), 
         batch_size=16,
         shuffle=True, 
         num_workers=max(1, 4//2),
         collate_fn=TestRelationDataset.collate_fn
     )
     test_dataset = DataLoader(
+        TestRelationDataset(train_info["test_triple"],all_true_triples, n_hyedge, e_num ,valid_sampler,c_num), 
+        batch_size=16,
+        shuffle=True, 
+        num_workers=max(1, 4//2),
+        collate_fn=TestRelationDataset.collate_fn
+    )
+    train_test = DataLoader(
         TestRelationDataset(train_info["train_triple"],all_true_triples, n_hyedge, e_num ,valid_sampler,c_num), 
         batch_size=16,
         shuffle=True, 
         num_workers=max(1, 4//2),
         collate_fn=TestRelationDataset.collate_fn
     )
-    smileGraphDataset = GINPretrainDataset(c_num)
-    bert_name = 'allenai/scibert_scivocab_uncased'
-    tokenizer = BertTokenizer.from_pretrained(bert_name)
-    # add tokenizer 
-    clDataset =OneShotIterator(DataLoader(
-     NodeEmbeddingClDataset(c_num),
-        batch_size=128,
-        shuffle=True, 
-        num_workers=max(1, 4//2),
-        collate_fn=TrainCollater(tokenizer, 200)
-    ))
+    # smileGraphDataset = GINPretrainDataset(c_num)
+    # bert_name = 'allenai/scibert_scivocab_uncased'
+    # tokenizer = BertTokenizer.from_pretrained(bert_name)
 
-    return train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset,clDataset
+    # clDataset =OneShotIterator(DataLoader(
+    #  NodeEmbeddingClDataset(c_num),
+    #     batch_size=128,
+    #     shuffle=True, 
+    #     num_workers=max(1, 4//2),
+    #     collate_fn=TrainCollater(tokenizer, 200)
+    # ))
+
+    dataset = SmilesDataset()
+    return train_dataset,valid_dataset,test_dataset,graph_info,train_info, dataset, None,train_test#smileGraphDataset,clDataset
 
 
 class NagativeRelationSampleDataset(Dataset):
@@ -96,9 +107,6 @@ class NagativeRelationSampleDataset(Dataset):
     def __len__(self):
         return self.len
 
-    def __len__(self):
-        return self.len
-    
     def __getitem__(self, idx):
         positive_sample = self.triples[idx]
         head, relation, tail = positive_sample
@@ -125,7 +133,7 @@ class NagativeRelationSampleDataset(Dataset):
         tail = torch.LongTensor([tail])
         
         return head,relation,tail, negative_sample, self.graph_sampler
-    
+
     @staticmethod
     def collate_fn(data):
         head = torch.cat([_[0] for _ in data], dim=0)
@@ -152,6 +160,8 @@ class NagativeRelationSampleDataset(Dataset):
         return true_relation
 
 
+
+
 class TestRelationDataset(Dataset):
     def __init__(self, triples, all_true_triples, nentity, nrelation, sampler, e_number):
         self.len = len(triples)
@@ -161,7 +171,6 @@ class TestRelationDataset(Dataset):
         self.nrelation = nrelation
         self.sampler = sampler
         self.e_num = e_number
-        
 
     def __len__(self):
         return self.len
@@ -243,9 +252,37 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         node_idx = torch.tensor([0])
         super(CEGraphSampler, self).__init__(node_idx.view(-1).tolist(), collate_fn=self.sample,batch_size=batch_size,**kwargs)
 
+    def cl_sampler(self, batch):
+        # n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
+        # n_id = batch.contiguous()  # 超边的id
+        n_id = batch
+        adjs = [] 
+
+        n_id_list = []
+        index = []
+        for i in range(len(n_id)):
+            adj_t, n_id = self.traj2traj_adj_t.sample_adj(n_id[i:i+1], 5, replace=False)
+            if len(n_id) > 1:
+                n_id_list.append(n_id[1:2])
+                index.append(i)
+        
+        n_id = torch.cat(n_id_list)
+        split_idx = len(n_id)
+        adj_t, n_id = self.ci2traj_adj_t.sample_adj(n_id, self.sizes[-1], replace=False)
+        row, col, e_id = adj_t.coo()
+        edge_attr = None
+        edge_type = None
+        size = adj_t.sparse_sizes()[::-1]
+        adjs.append((adj_t, edge_attr,  edge_type, e_id, size))
+        index = torch.LongTensor(index)
+        out = (n_id, adjs, split_idx),index
+        return out
+
     def sample(self, batch):
         # n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
-        n_id = batch.contiguous()
+        n_id = batch.contiguous()  # 超边的id
+        if self.mode == "train":
+            cl_out = self.cl_sampler(n_id)
         adjs = [] 
         for i, size in enumerate(self.sizes):
             if i == len(self.sizes) - 1:
@@ -266,8 +303,10 @@ class CEGraphSampler(torch.utils.data.DataLoader):
 
         adjs = adjs[0] if len(adjs) == 1 else adjs[::-1]
         out = (n_id, adjs, split_idx)
-        
-        return out
+        if self.mode=='train':
+            return out,cl_out
+        else:
+            return out
 
     def __repr__(self):
         return '{}(sizes={})'.format(self.__class__.__name__, self.sizes)
@@ -278,7 +317,7 @@ class GINPretrainDataset(Dataset):
         super(GINPretrainDataset, self).__init__()
         self.c_num = c_num
 
-        path = "/home/tengwei/hypergraph/brenda_data/filter_data/graph/"
+        path = "/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/graph/"
         self.path_list = []
         for i in range(c_num):
             self.path_list.append(os.path.join(path,"graph_"+str(i)+".pt"))
@@ -303,20 +342,17 @@ class NodeEmbeddingClDataset(Dataset):
     def __init__(self, c_num ):
         super(NodeEmbeddingClDataset, self).__init__()
         self.c_num = c_num
-        path = "/home/tengwei/hypergraph/brenda_data/filter_data/id2cid.json"
+        path = "/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/id2cid.json"
         with open(path) as f:
             id2cid = json.load(f)
-        self.graph_path = "/home/tengwei/hypergraph/brenda_data/filter_data/graph/"
-        self.text_path  = "/home/tengwei/hypergraph/brenda_data/filter_data/text/"
+        self.graph_path = "/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/graph/"
+        self.text_path  = "/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/text/"
 
         self.datalist = []
         for id,cid in id2cid.items():
             text_file = os.path.join(self.text_path,"text_%s.txt"% str(cid))
             if os.path.exists(text_file):
                 self.datalist.append((id,cid))
-
-
-
 
     def get(self, index):
         return self.__getitem__(index)
@@ -372,3 +408,4 @@ class OneShotIterator(object):
         while True:
             for data in dataloader:
                 yield data
+
