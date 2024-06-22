@@ -464,3 +464,57 @@ CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName 
 CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName cl_0529_03 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl3.log &
 CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName cl_0529_04 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl4.log &
 
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName cl_0529_01 --save_path ./models/brenda_hyperedge_add_cl  > brenda_hyperedge_add_cl2.log &
+
+# alhpweight = 0.5 max_noise = 0.05
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName cl_0529_01 --save_path ./models/brenda_hyperedge_add_hyper_noise  > brenda_hyperedge_hyper_noise_cl1.log &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName cl_0529_01 --save_path ./models/brenda_hyperedge_add_entity_noise  > brenda_hyperedge_entity_noise_cl1.log &
+
+
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_01 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_01 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_02 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_02 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_03 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_03 &
+
+# CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName tucker_0410_02 --save_path ./models/brenda_hyperedge_add_entity_noise  > brenda_hyperedge_entity_noise_cl2.log &
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_cl_02 --save_path ./models/202406/brenda_hyperedge_add_hyper_cl_02 &
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_cl_03 --save_path ./models/202406/brenda_hyperedge_add_hyper_cl_01 &
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_cl_01 --save_path ./models/202406/brenda_hyperedge_add_hyper_cl_03 &
+
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_04 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_01 &
+CUDA_VISIBLE_DEVICES=3 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_05 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_02 &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_06 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_03 &
+
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_01 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_04 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_02 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_05 &
+CUDA_VISIBLE_DEVICES=4 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_03 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_06 &
+
+# add weight
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_cl_04 --save_path ./models/202406/brenda_hyperedge_add_hyper_cl_04 &
+
+_three
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_04 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_04 &
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_05 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_05 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_06 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_06 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_01 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_01 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_02 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_03 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_03 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_04 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_04 &
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_05 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_05 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_06 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_06 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_01 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_01 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_02 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_02 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_entity_noise_03 --save_path ./models/202406/brenda_hyperedge_add_entity_noise_three_03 &
+
+
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_14 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_14 &
+CUDA_VISIBLE_DEVICES=0 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_15 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_15 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_16 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_16 &
+CUDA_VISIBLE_DEVICES=1 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_11 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_11 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_12 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_12 &
+CUDA_VISIBLE_DEVICES=2 nohup python hyper_graph_brenda.py  --train --configName hyper_graph_noise_13 --save_path ./models/202406/brenda_hyperedge_add_hyper_noise_three_13 &

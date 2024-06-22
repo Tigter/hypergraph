@@ -31,6 +31,11 @@ def build_graph_sampler(config):
     e2id, e_num = graph_info["e2id"],graph_info["e_num"]
 
     n_hyedge = len(graph_info["clist2edgeId"])
+    clist2edgeId = graph_info["clist2edgeId"]
+    edge2id2cList = {
+        clist2edgeId[key] :key  for key in clist2edgeId.keys()
+    }
+    print(len(edge2id2cList))
 
 
     sampler = CEGraphSampler(graph_info, train_info, 
@@ -73,21 +78,16 @@ def build_graph_sampler(config):
         num_workers=max(1, 4//2),
         collate_fn=TestRelationDataset.collate_fn
     )
-    # smileGraphDataset = GINPretrainDataset(c_num)
-    # bert_name = 'allenai/scibert_scivocab_uncased'
-    # tokenizer = BertTokenizer.from_pretrained(bert_name)
 
-    # clDataset =OneShotIterator(DataLoader(
-    #  NodeEmbeddingClDataset(c_num),
-    #     batch_size=128,
-    #     shuffle=True, 
-    #     num_workers=max(1, 4//2),
-    #     collate_fn=TrainCollater(tokenizer, 200)
-    # ))
-
-    dataset = SmilesDataset()
-    return train_dataset,valid_dataset,test_dataset,graph_info,train_info, dataset, None,train_test#smileGraphDataset,clDataset
-
+    cl_dataset = OneShotIterator(DataLoader(
+        HyperEdgeClDataset(train_info["train_triple"],edge2id2cList,sampler), 
+        batch_size=config["batch_size"],
+        shuffle=True, 
+        num_workers=max(1, 4//2),
+        collate_fn=HyperEdgeClDataset.collate_fn
+    ))
+    # dataset = SmilesDataset()
+    return train_dataset,valid_dataset,test_dataset,graph_info,train_info, None, None,train_test,cl_dataset#smileGraphDataset,clDataset
 
 class NagativeRelationSampleDataset(Dataset):
 
@@ -278,11 +278,26 @@ class CEGraphSampler(torch.utils.data.DataLoader):
         out = (n_id, adjs, split_idx),index
         return out
 
+    def sampler_v(self, batch):
+        adjs = []
+        n_id = batch.contiguous()
+        split_idx = len(n_id)
+        adj_t, n_id = self.ci2traj_adj_t.sample_adj(n_id, 20, replace=False)
+        row, col, e_id = adj_t.coo()
+        edge_attr = None
+        edge_type = None        
+        size = adj_t.sparse_sizes()[::-1]
+        adjs.append((adj_t, edge_attr,  edge_type, e_id, size))
+
+        out = (n_id, adjs, split_idx)
+        return out
+
     def sample(self, batch):
         # n_id = torch.tensor(batch, dtype=torch.long)   # 但是采样中心还是使用原来的 id，因为在整个图结构当中是这样的，不然采样会不正确
         n_id = batch.contiguous()  # 超边的id
         if self.mode == "train":
-            cl_out = self.cl_sampler(n_id)
+            # cl_out = self.cl_sampler(n_id)
+            cl_out = None
         adjs = [] 
         for i, size in enumerate(self.sizes):
             if i == len(self.sizes) - 1:
@@ -409,3 +424,112 @@ class OneShotIterator(object):
             for data in dataloader:
                 yield data
 
+
+
+class HyperEdgeClDataset(Dataset):
+    def __init__(self, triples,edge2id2cList,sampler):
+        super(HyperEdgeClDataset, self).__init__()
+        self.triples = triples
+
+        print(len(self.triples))
+        # 目标： 计算不同超边的相似度
+        # 然后 left 的edgeId 之间判断相似性，如果相似，将他们的 
+        self.samples = []
+        self.weights = []
+        with open("/home/skl/yl/ce_project/relation_cl/sh/head_dict.json","r") as f:
+            self.head_dict = json.load(f)
+        with open("/home/skl/yl/ce_project/relation_cl/sh/tail_dict.json","r") as f:
+            self.tail_dict = json.load(f)
+
+        # self.head_dict, self.tail_dict = self.find_intersections(triples, edge2id2cList)
+        
+        # with open("/home/skl/yl/ce_project/relation_cl/sh/head_dict.json","w") as f:
+        #     json.dump( self.head_dict,f)
+        # with open("/home/skl/yl/ce_project/relation_cl/sh/tail_dict.json","w") as f:
+        #     json.dump( self.tail_dict,f)
+
+        for head_id_1, similarity_dict in self.head_dict.items():
+            for head_id_2, weight in similarity_dict.items():
+                if head_id_1 != head_id_2:  # 排除自身匹配
+                    self.samples.append((head_id_1, head_id_2))
+                    self.weights.append(weight)
+
+        for head_id_1, similarity_dict in self.tail_dict.items():
+            for head_id_2, weight in similarity_dict.items():
+                if head_id_1 != head_id_2:  # 排除自身匹配
+                    self.samples.append((head_id_1, head_id_2))
+                    self.weights.append(weight)
+        print(len(self.samples))
+        self.sampler = sampler
+
+    def find_intersections(self,lst, edge2id2cList):
+        head_dict = {}
+        tail_dict = {}
+        for i in range(len(lst)):
+            head_id, r, tail_id = lst[i]
+            # print(head_id)
+            # if head_id not in edge2id2cList or tail_id not in edge2id2cList: continue
+            head_list = edge2id2cList[head_id]
+            tail_list = edge2id2cList[tail_id]
+            for j in range(i + 1, len(lst)):
+                other_head_id, _, other_tail_id = lst[j]
+                # if other_head_id not in edge2id2cList or other_tail_id not in edge2id2cList: continue
+                other_head_list = edge2id2cList[other_head_id]
+                other_tail_list = edge2id2cList[other_tail_id]
+                tail_intersection = set(tail_list) & set(other_tail_list)
+                head_intersection = set(head_list) & set(other_head_list)
+                if tail_intersection:
+                    if head_id not in head_dict:
+                        head_dict[head_id] = {}
+                    if other_head_id not in head_dict[head_id]:
+                        head_dict[head_id][other_head_id] = len(tail_intersection)
+                    else:
+                        head_dict[head_id][other_head_id] += len(tail_intersection)
+                        
+                    if other_head_id not in head_dict:
+                        head_dict[other_head_id] = {}
+                    if head_id not in head_dict[other_head_id]:
+                        head_dict[other_head_id][head_id] = len(tail_intersection)
+                    else:
+                        head_dict[other_head_id][head_id] += len(tail_intersection)
+                        
+                if head_intersection:
+                    if tail_id not in tail_dict:
+                        tail_dict[tail_id] = {}
+                    if other_tail_id not in tail_dict[tail_id]:
+                        tail_dict[tail_id][other_tail_id] = len(head_intersection)
+                    else:
+                        tail_dict[tail_id][other_tail_id] += len(head_intersection)
+                        
+                    if other_tail_id not in tail_dict:
+                        tail_dict[other_tail_id] = {}
+                    if tail_id not in tail_dict[other_tail_id]:
+                        tail_dict[other_tail_id][tail_id] = len(head_intersection)
+                    else:
+                        tail_dict[other_tail_id][tail_id] += len(head_intersection)     
+        return head_dict, tail_dict
+    
+    def get(self, index):
+        return self.__getitem__(index)
+
+    def len(self):
+        return len(self.samples)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, index):
+        base,pos = self.samples[index]
+
+        weight = int(self.weights[index])
+        return torch.LongTensor([int(base)]),torch.LongTensor([int(pos)]),torch.LongTensor([weight]),self.sampler
+
+    @staticmethod
+    def collate_fn(data):
+        base = torch.cat([_[0] for _ in data], dim=0)
+        pos = torch.cat([_[1] for _ in data], dim=0)
+        weight = torch.cat([_[2] for _ in data], dim=0)
+        sampler = data[0][3]
+        base_out = sampler.sampler_v(base)
+        pos_out = sampler.sampler_v(pos)
+        return base,pos,weight,base_out,pos_out

@@ -1,8 +1,5 @@
-import datetime
 import math
 import numpy as np
-import time
-from scipy.sparse import csr_matrix
 import torch
 from torch import nn, backends
 from torch.nn import Module, Parameter
@@ -11,16 +8,17 @@ import torch.sparse
 from core.HyperCEBrenda import HyperCE
 from loss import *
 
-from core.BaseLayer import MulScoreGnn
-from core.SmileTransformer import *
-from core.HypergraphTransformer import HypergraphTransformer
+# from core.BaseLayer import MulScoreGnn
+# from core.SmileTransformer import *
+# from core.HypergraphTransformer import HypergraphTransformer
+# from core.mollm.GinT5 import *
 
-from core.SmilesGnn import *
-from core.BoxLevel import *
+# from core.SmilesGnn import *
+# from core.BoxLevel import *
 import torch.utils.data
 from transformers import T5Tokenizer
 
-from core.mollm.GinT5 import *
+
 
 class MLPModel(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout, sigmoid_last_layer=False):
@@ -70,12 +68,12 @@ class HyperGraphV3(Module):
         #     drop_ratio=config["node_gnn_dropout"],
         #     JK='last',
         # )
-
+        self.mse_loss = nn.MSELoss()
         # self.node_encoder = TrfmSeq2seq(len(NodeGnnDataset.vocab),config["transformer_dim"], len(NodeGnnDataset.vocab), config["transformer_layer"]).cuda()
         self.tokenizer = T5Tokenizer.from_pretrained("/home/skl/yl/ce_project/relation_cl/core/mollm/pretrain_model/MoleculeCaption/molt5-base-smiles2caption/", model_max_length=512)
-        self.node_encoder = GinDecoder(has_graph=False, MoMuK=False, model_size="base", use_3d=True)
-        for name, parameter in self.node_encoder.named_parameters():
-            parameter.requires_grad = False
+        # self.node_encoder = GinDecoder(has_graph=False, MoMuK=False, model_size="base", use_3d=True)
+        # for name, parameter in self.node_encoder.named_parameters():
+        #     parameter.requires_grad = False
         
         self.NodeGnnDataset= NodeGnnDataset
         self.clDataset = clDataset
@@ -107,7 +105,7 @@ class HyperGraphV3(Module):
         # self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
         # self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
 
-        self.box = BoxLevel(5406,1, self.entity_dim)
+        # self.box = BoxLevel(5406,1, self.entity_dim)
 
         self.q_weight = torch.nn.Sequential(
             torch.nn.Linear(hyperkgeConfig.embedding_dim * 3, hyperkgeConfig.embedding_dim),
@@ -157,11 +155,11 @@ class HyperGraphV3(Module):
    
 
     def reg_l2(self):
-        # return torch.mean(torch.norm(self.node_emb.weight,dim=-1))
-        reg_loss = 0
-        for param in self.parameters():
-            reg_loss += torch.norm(param, p=2)  # 使用L2正则化
-        return reg_loss
+        return torch.mean(torch.norm(self.node_emb.weight,dim=-1))
+        # reg_loss = 0
+        # for param in self.parameters():
+        #     reg_loss += torch.norm(param, p=2)  # 使用L2正则化
+        # return reg_loss
         # return torch.mean(torch.norm())
     
 
@@ -184,16 +182,23 @@ class HyperGraphV3(Module):
         # batch_node = self.node_encoder.encode(batch)
         return node
 
-    def single_emb(self, data):
+    def single_emb(self, data,add_noise=False):
         n_id, adjs, split_idx = data
         n_id = n_id[split_idx:]
         x = self.get_base_emb(n_id)
+        if add_noise:
+            x_noise = self.sample_noise(x)
+            x = x + x_noise
         # n_id = n_id.cuda()
         # x = self.node_emb(n_id[split_idx:])
         hyper_edge_emb = self.encoder(n_id,x, adjs,split_idx, True)
         return hyper_edge_emb
 
-    def full_score(self, head_emb, relation, tail_emb):
+    def sample_noise(self, x):
+        noise = torch.randn_like(x).to(x.device) * self.noise_sigma
+        return noise
+
+    def full_score(self, head_emb, relation, tail_emb,add_noise=False):
         relation_emb = self.rel_emb(relation)
         # relation_emb = None
         if len(relation_emb.shape) == 2:
@@ -205,6 +210,13 @@ class HyperGraphV3(Module):
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
         
+        # 给超边增加噪声
+        head_noise = self.sample_noise(head_emb)
+        tail_noise = self.sample_noise(tail_emb)
+
+        head_emb = head_emb + head_noise
+        tail_emb = tail_emb + tail_noise
+
         return self.realtion_predict(head_emb, relation_emb, tail_emb)
 
     def realtion_predict(self, head, relation, tail):
@@ -288,7 +300,7 @@ class HyperGraphV3(Module):
         return x
     
     @staticmethod
-    def cl_score(x,y,temperature=0.5):
+    def cl_score(x,y,weight,temperature=0.5):
         if x.shape != y.shape:
             return None
         """
@@ -303,38 +315,60 @@ class HyperGraphV3(Module):
         # 计算余弦相似度
         x = F.normalize(x, dim=1)
         y = F.normalize(y, dim=1)
-        similarity_matrix = torch.matmul(x, y.T) / temperature
+        similarity_matrix = torch.matmul(x, y.T) / temperature # N*N的相似矩阵
         # 生成标签
         labels = torch.arange(batch_size).to(x.device)
-        # 计算交叉熵损失
-        loss_x = F.cross_entropy(similarity_matrix, labels)
-        loss_y = F.cross_entropy(similarity_matrix.T, labels)
-        # 平均损失
-        loss = (loss_x + loss_y) / 2
+
+        softmax_scores = F.log_softmax(similarity_matrix, dim=1)
+       
+        loss = -softmax_scores[torch.arange(batch_size), labels] 
+        if weight != None:
+            weight = weight.to(x.device)
+            loss = loss * weight
+        loss = loss.mean()
         return loss
 
     @staticmethod
-    def train_step(model,optimizer,data,loss_funcation, config=None,subClassOf=None, typeOf= None, subLoss=None, typeLoss=None):
+    def train_step(model,optimizer,data,loss_funcation, config=None,subClassOf=None, typeOf= None, subLoss=None, typeLoss=None,cl_dataset=None):
         optimizer.zero_grad()
         model.train()
 
         head,relation,tail,negative_sample,head_out,tail_out = data
+        relation = relation.cuda()
 
         head_out, cl_head = head_out
         tail_out, cl_tail = tail_out
-
+        # base loss
         head_emb = model.single_emb(head_out)
         tail_emb = model.single_emb(tail_out)
-
-
-
-
-        relation = relation.cuda()
-        negative_sample = negative_sample.cuda()
-
         pos_score = model.full_score(head_emb, relation, tail_emb)
-        # neg_score = model.full_score(head_emb, negative_sample, tail_emb)
         loss = model.loss_funcation(pos_score,relation)
+        logs = {    
+            "loss": loss.item(),
+            
+        }
+        add_entity_noise = False
+        add_edge_noise = True
+
+        if config["add_entity_noise"]:
+            head_emb_noise = model.single_emb(head_out,add_noise=True)
+            tail_emb_noise = model.single_emb(tail_out,add_noise=True)
+            noise_score = model.full_score(head_emb_noise, relation, tail_emb_noise, add_noise=False)
+            mse_loss = model.mse_loss(pos_score, noise_score)
+            noise_loss = model.loss_funcation(noise_score,relation)
+
+            loss = loss + mse_loss*config["noise_weight"] + noise_loss
+            logs["mse_loss"] = mse_loss.item()*config["noise_weight"]
+           
+        if config["add_edge_noise"]:
+            noise_score = model.full_score(head_emb, relation, tail_emb, add_noise=True)
+            mse_loss = model.mse_loss(pos_score, noise_score)
+            noise_loss = model.loss_funcation(noise_score,relation)
+
+            loss = loss + mse_loss*config["noise_weight"] + noise_loss
+            logs["mse_loss"] = mse_loss.item()*config["noise_weight"] 
+            logs["noise_loss"] = noise_loss.item()
+
         # if True:
 
         #     if len(pos_score.shape) != len(neg_score.shape):
@@ -344,42 +378,16 @@ class HyperGraphV3(Module):
         #     loss = model.loss_funcation(score,label)
         # else:
         #     loss = loss_funcation(pos_score, neg_score)
-        logs = {    
-            "loss": loss.item(),
-            # "ec_loss": loss_ec.item(),
-            # "ko_loss": loss_enzyme_ko.item()
-        }
-
-        cl_head, head_index = cl_head
-        head_cl_emb = model.single_emb(cl_head)
-        cl_tail, tail_index = cl_tail
-        tail_cl_emb = model.single_emb(cl_tail)
-
-        head_pos = head_emb[head_index]
-        head_cl_loss = HyperGraphV3.cl_score(head_pos,head_cl_emb)
-
-        tail_pos = tail_emb[tail_index]
-        tail_cl_loss = HyperGraphV3.cl_score(tail_pos,tail_cl_emb)
 
 
-        cl_total = 0
-        if head_cl_loss != None:
-            loss += config["cl_weight"]*head_cl_loss
-            cl_total = head_cl_loss.item()
-            
-
-        if tail_cl_loss != None:
-            loss += tail_cl_loss
-            cl_total += config["cl_weight"]*tail_cl_loss.item()
-        logs["cl_loss"] = cl_total
-
-        # # sub_loss = HyperGraphV3.train_boxlevel_step(model.box,subClassOf, subLoss)
-        # # logs["sub_loss"] = sub_loss.item()
-        # # loss += sub_loss
-
-        # # sub_loss = HyperGraphV3.train_typeOf_step(model,typeOf, typeLoss)
-        # # logs["typeOf_loss"] = sub_loss.item()
-        # # loss += sub_loss
+        add_cl = False
+        if config["add_edge_cl"]:
+            base,pos,weight,base_out,pos_out = next(cl_dataset)
+            base_emb = model.single_emb(base_out)
+            pos_emb = model.single_emb(pos_out)
+            cl_loss = HyperGraphV3.cl_score(base_emb,pos_emb,weight, config["cl_temp"])
+            loss += config["cl_weight"]*cl_loss
+            logs["cl_loss"] = cl_loss.item() * config["cl_weight"]
 
         if config["reg_weight"] != 0.0:
             reg = model.reg_l2()
@@ -387,10 +395,7 @@ class HyperGraphV3(Module):
             loss += reg * config["reg_weight"]
         loss.backward()
         optimizer.step()
-        
         return logs
-
-
 
     @staticmethod
     def train_boxlevel_step(model, train_iterator,loss_function):
@@ -449,9 +454,7 @@ class HyperGraphV3(Module):
         r = positive_sample[:,1]
         t = positive_sample[:,2]
         negative_score = typeOf_score(model,h,negative_sample)
-
         positive_score = typeOf_score(model,h,t)
-
         loss = loss_function(positive_score, negative_score, subsampling_weight)
 
         return loss

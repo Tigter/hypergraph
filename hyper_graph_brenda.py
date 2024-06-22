@@ -34,6 +34,22 @@ from core.HyperCEBrenda import HyperKGEConfig
 
 import pickle
 
+def cosine_annealing(epoch, num_epochs, start_lr, end_lr):
+    import math
+    cos_val = math.cos(math.pi * epoch / num_epochs)
+    return end_lr + (start_lr - end_lr) * 0.5 * (1 + cos_val)
+
+def get_noise_sigma(step, max_step,config):
+    noise_sigma = config["noise_sigma"]
+    noise_sigma = noise_sigma * cosine_annealing(step, max_step, 0, 1)
+    return noise_sigma
+
+def get_entity_noise_sigma(weight, step, max_step):
+    _3sigma_percent = 0.9973
+    noise_sigma = float(torch.topk(weight.reshape(-1).abs(), int(weight.shape[0]*weight.shape[1] * _3sigma_percent), largest=False)[0][-1]) / 3 * 0.1
+    noise_sigma = noise_sigma * cosine_annealing(step, max_step, 0, 1)
+    return noise_sigma
+
 def logging_log(step, logs,writer):
     metrics = {}
     for metric in logs[0].keys():
@@ -195,7 +211,7 @@ if __name__=="__main__":
     # 读取4个数据集
     setup_seed(20)
     args = set_config()
-    with open('./config/hypergraph_brenda.yml','r', encoding='utf-8') as f:
+    with open('./config/hypergraph_brenda_06.yml','r', encoding='utf-8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         baseConfig = config['baseConfig']
         modelConfig = config[args.configName]
@@ -235,7 +251,7 @@ if __name__=="__main__":
         logset.set_logger(root_path,'test.log')
     
     # 读取数据集
-    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset, clDataset,train_test = build_graph_sampler(modelConfig)
+    train_dataset,valid_dataset,test_dataset,graph_info,train_info,smileGraphDataset, clDataset,train_test,cl_dataset = build_graph_sampler(modelConfig)
     subClassOf, typeOf = build_aux_dataset()
     logging.info('build trainning dataset....')
     # base_loss_funcation = nn.CosineEmbeddingLoss(margin=modelConfig['margin'])
@@ -320,8 +336,9 @@ if __name__=="__main__":
         logging.info('beging trainning')
         for step in range(init_step, max_step):
             begin_time = time.time()
+            model.noise_sigma = get_entity_noise_sigma(model.node_emb.weight,step, max_step)
+            # model.noise_sigma = get_noise_sigma(step, max_step,modelConfig)
             if step % 10 == 0 :
-
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 ModelUtil.save_model(model,optimizer,save_variable_list=save_variable_list,path=root_path,args=args)
@@ -330,11 +347,6 @@ if __name__=="__main__":
                 save_variable_list = {"lr":lr_scheduler.get_last_lr(),"step":step,'ConfigName':args.configName
                 }
                 logging.info('Valid InstanceOf at step: %d' % step)
-                # metrics = test_inductive(model,valid_sampler)
-                # metrics = test_step_function(model, train_test,modelConfig)
-                # for key in metrics:
-                #     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
-                # logset.log_metrics('Train Valid ', step, metrics)
                 metrics = test_step_function(model, valid_dataset,modelConfig)
                 metrics["Mix"] = (metrics["HITS@1"] + metrics["HITS@3"] + metrics["HITS@10"]) / 3
                 for key in metrics:
@@ -342,7 +354,7 @@ if __name__=="__main__":
                 logset.log_metrics('Valid ', step, metrics)
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
             for data in train_dataset:
-                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,subClassOf=subClassOf, typeOf= typeOf,subLoss=sub_loss_function,typeLoss=type_loss_function)
+                log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,subClassOf=subClassOf, typeOf= typeOf,subLoss=sub_loss_function,typeLoss=type_loss_function,cl_dataset=cl_dataset)
                 baselog.append(log)
             if step % 5 == 0:
                 logging_log(step, baselog, writer)

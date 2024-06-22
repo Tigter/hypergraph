@@ -300,10 +300,8 @@ class HyperCE(nn.Module):
         self.attr2rel_bn.reset_parameters()
       
     def forward(self, n_id, x , adjs ,split_idx, cuda):
-        
         if cuda:
             x = x.cuda()
-     
         hyper_edge_emb = torch.zeros(
             split_idx,
             self.hyperkgeConfig.embedding_dim,

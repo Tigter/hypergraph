@@ -50,11 +50,6 @@ def check_same_data(train, valid, test):
 
 valid_data,test_data = check_same_data(train_data,valid_data,test_data)
 
-# with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_valid.json","w") as f:
-#     json.dump(valid_data,f)
-
-# with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_test.json","w") as f:
-#     json.dump(test_data,f)
 
 cset,eset, e2id,c2id = build_dict_for_double_data(train_data)
 

@@ -5,133 +5,10 @@ baseConfig:
   save_step: 10000
   valid_step: 10000
 
-complex_0330_01: 
+
+hyper_graph_noise_01: 
   batch_size: 2048
-  name: ComplEx
-  gamma: 10
-  dim: 500
-  lr: 0.0001
-  cuda: True
-  decay: 0.1
-  max_step: 3000
-  layer: 2
-  n_size: 200
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-
-complex_0330_02: 
-  batch_size: 2048
-  cuda: True
-  name: ComplEx
-  gamma: 10
-  dim: 500
-  lr: 0.0005
-  decay: 0.1
-  max_step: 3000
-  layer: 2
-  n_size: 200
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-
-complex_0330_03: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 10
-  dim: 500
-  lr: 0.0001
-  cuda: True
-  decay: 0.1
-  max_step: 3000
-  layer: 2
-  n_size: 400
-  box_lr: 0.005
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-
-
-complex_0330_04: 
-  batch_size: 32
-  cuda: True
-  name: ComplEx
-  gamma: 10
-  dim: 200
-  lr: 0.001
-  decay: 0.1
-  max_step: 3000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  box_lr: 0.005
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,10]
-  test_neibor_size: [50,10]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-tucker_0410_01: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 10
-  dim: 500
-  lr: 0.0001
-  cuda: True
-  decay: 0.1
-  max_step: 3000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-
-tucker_0410_02: 
-  batch_size: 2048
-  name: ComplEx
+  name: MLP
   gamma: 10
   dim: 500
   lr: 0.0005
@@ -159,44 +36,19 @@ tucker_0410_02:
   cl_weight: 0.0001
   noise_weight: 0.05
   noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
 
-tucker_0410_03: 
+hyper_graph_noise_02: 
   batch_size: 2048
-  name: ComplEx
+  name: MLP
   gamma: 10
   dim: 500
   lr: 0.0005
   box_lr: 0.005
   cuda: True
   decay: 0.1
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-tucker_0410_04: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.001
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
   max_step: 3000
   layer: 2
   n_size: 400
@@ -215,103 +67,23 @@ tucker_0410_04:
   gamma_t: 10
   transformer_dim: 200
   transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
 
-tucker_0410_05: 
+hyper_graph_noise_03: 
   batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 100
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-tucker_0410_06: 
-  batch_size: 32
-  name: ComplEx
-  gamma: 15
-  dim: 100
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 100
-  transformer_layer: 4
-
-tucker_0410_07: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  cl_weight: 0.1
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-
-mul_score_0417_01: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 1
+  name: MLP
+  gamma: 10
   dim: 500
   lr: 0.0005
   box_lr: 0.005
   cuda: True
-  decay: 0.5
-  max_step: 5000
+  decay: 0.1
+  max_step: 3000
   layer: 2
   n_size: 400
   test_step: 50
@@ -329,228 +101,30 @@ mul_score_0417_01:
   gamma_t: 10
   transformer_dim: 200
   transformer_layer: 4
-
-
-mollm_0421_01: 
-  batch_size: 32
-  name: ComplEx
-  gamma: 15
-  dim: 768
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 100
-  transformer_layer: 4
-
-mollm_0421_02: 
-  batch_size: 1024
-  name: ComplEx
-  gamma: 15
-  dim: 768
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 100
-  transformer_layer: 4
-
-
-mollm_0421_03: 
-  batch_size: 1024
-  name: ComplEx
-  gamma: 15
-  dim: 768
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 100
-  transformer_layer: 4
-
-mollm_0421_03_fine_tuning: 
-  batch_size: 32
-  name: ComplEx
-  gamma: 15
-  dim: 768
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 100
-  transformer_layer: 4
-
-
-
-cl_0529_01: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  cl_weight: 0.1
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-cl_0529_02: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  cl_weight: 0.01
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-cl_0529_03: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
-  cl_weight: 0.001
-  neibor_size: [30,10]
-  full_neibor_size: [50,15]
-  test_neibor_size: [50,15]
-  data_reverse: False
-  node_gnn_layer: 3
-  node_gnn_dropout: 0.6
-  gamma_s: 10
-  gamma_t: 10
-  transformer_dim: 200
-  transformer_layer: 4
-
-cl_0529_04: 
-  batch_size: 2048
-  name: ComplEx
-  gamma: 15
-  dim: 500
-  lr: 0.0005
-  box_lr: 0.0005
-  cuda: True
-  decay: 0.5
-  max_step: 5000
-  layer: 2
-  n_size: 400
-  test_step: 50
-  reg_weight: 0.001
-  dropout: 0.3
-  margin: 0.2
-  cl_temp: 1.0
   cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_04: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
   neibor_size: [30,10]
   full_neibor_size: [50,15]
   test_neibor_size: [50,15]
@@ -561,3 +135,628 @@ cl_0529_04:
   gamma_t: 10
   transformer_dim: 200
   transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.05
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_05: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_06: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+
+hyper_graph_cl_01: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0000
+  cl_temp: 1.0
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: False
+  add_edge_cl: True
+
+hyper_graph_cl_02: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0005
+  cl_temp: 1.0
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: False
+  add_edge_cl: True
+
+hyper_graph_cl_03: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0000
+  cl_temp: 1.0
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: False
+  add_edge_cl: True
+
+hyper_graph_cl_04: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0000
+  cl_temp: 1.0
+  noise_weight: 0.01
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: False
+  add_edge_cl: True
+
+
+hyper_graph_entity_noise_01: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.05
+  noise_sigma: 0.01
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+hyper_graph_entity_noise_02: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+hyper_graph_entity_noise_03: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.001
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+hyper_graph_entity_noise_04: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.005
+  noise_sigma: 0.01
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+hyper_graph_entity_noise_05: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.1
+  noise_sigma: 0.01
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+hyper_graph_entity_noise_06: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.5
+  noise_sigma: 0.1
+  add_edge_noise: False
+  add_entity_noise: True
+  add_edge_cl: False
+
+
+
+
+
+hyper_graph_noise_11: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.001
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_12: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.0005
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_13: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.0001
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_14: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.005
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_15: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.005
+  noise_sigma: 0.01
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+
+hyper_graph_noise_16: 
+  batch_size: 2048
+  name: MLP
+  gamma: 10
+  dim: 500
+  lr: 0.0005
+  box_lr: 0.005
+  cuda: True
+  decay: 0.1
+  max_step: 3000
+  layer: 2
+  n_size: 400
+  test_step: 50
+  reg_weight: 0.000
+  dropout: 0.3
+  margin: 0.2
+  cl_temp: 1.0
+  neibor_size: [30,10]
+  full_neibor_size: [50,15]
+  test_neibor_size: [50,15]
+  data_reverse: False
+  node_gnn_layer: 3
+  node_gnn_dropout: 0.6
+  gamma_s: 10
+  gamma_t: 10
+  transformer_dim: 200
+  transformer_layer: 4
+  cl_weight: 0.0001
+  noise_weight: 0.01
+  noise_sigma: 0.001
+  add_edge_noise: True
+  add_entity_noise: False
+  add_edge_cl: False
+

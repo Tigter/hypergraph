@@ -149,6 +149,7 @@ def transe_single2id(datas, e2id, clist2edgeId, edge_id_start):
         single_train.append((left,e))
         single_train.append((right,e))
     return train_triples, single_train, clist2edgeId, edge_id
+
 def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_id):
     '''
         data: left, right e 组成的数据利润表
