@@ -18,9 +18,10 @@ from rdkit import Chem
 from util.smiles.transormer_util import *
 
 def load_data():
-
-    graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_dataset_reaction_clean_graph_info.pkl")
-    train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_dataset_reaction_clean_train_info.pkl")
+    # graph_info = torch.load("./pre_handle_data/brenda_small_dataset_reaction_filter_lowf_graph_info.pkl")
+    # train_info = torch.load("./pre_handle_data/brenda_small_dataset_reaction_filter_lowf_train_info.pkl")
+    graph_info = torch.load("./pre_handle_data/brenda_all_highf_dataset_reaction_graph_info.pkl")
+    train_info = torch.load("./pre_handle_data/brenda_all_highf_dataset_reaction_train_info.pkl")
     return graph_info, train_info
 
 def build_graph_sampler(config):
@@ -79,14 +80,15 @@ def build_graph_sampler(config):
         collate_fn=TestRelationDataset.collate_fn
     )
 
-    cl_dataset = OneShotIterator(DataLoader(
-        HyperEdgeClDataset(train_info["train_triple"],edge2id2cList,sampler), 
-        batch_size=config["batch_size"],
-        shuffle=True, 
-        num_workers=max(1, 4//2),
-        collate_fn=HyperEdgeClDataset.collate_fn
-    ))
+    # cl_dataset = OneShotIterator(DataLoader(
+    #     HyperEdgeClDataset(train_info["train_triple"],edge2id2cList,sampler), 
+    #     batch_size=config["batch_size"],
+    #     shuffle=True, 
+    #     num_workers=max(1, 4//2),
+    #     collate_fn=HyperEdgeClDataset.collate_fn
+    # ))
     # dataset = SmilesDataset()
+    cl_dataset = None   
     return train_dataset,valid_dataset,test_dataset,graph_info,train_info, None, None,train_test,cl_dataset#smileGraphDataset,clDataset
 
 class NagativeRelationSampleDataset(Dataset):

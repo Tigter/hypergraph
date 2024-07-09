@@ -8,15 +8,39 @@ import numpy as np
 import json 
 
 from data_pre_handle_utils import *
-
+import os
 # 处理酶和化合物的数据
 
+# def load_brenda_data():
+#     with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/train_reaction.json", "r") as f:
+#         train_data = json.load(f)
+#     with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/valid_reaction.json", "r") as f:
+#         valid_data = json.load(f)
+#     with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/test_reaction.json", "r") as f:
+#         test_data = json.load(f)
+#     return train_data, valid_data, test_data
+
+# def load_brenda_data():
+#     with open("../brenda_data/brenda_data_all/train_reaction.json", "r") as f:
+#         train_data = json.load(f)
+#     with open("../brenda_data/brenda_data_all/valid_reaction.json", "r") as f:
+#         valid_data = json.load(f)
+#     with open("../brenda_data/brenda_data_all/test_reaction.json", "r") as f:
+#         test_data = json.load(f)
+#     return train_data, valid_data, test_data
+
 def load_brenda_data():
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/train_reaction.json", "r") as f:
+    # with open("../brenda_all_highf/train.json", "r") as f:
+    #     train_data = json.load(f)
+    # with open("../brenda_all_highf/valid.json", "r") as f:
+    #     valid_data = json.load(f)
+    # with open("../brenda_all_highf/test.json", "r") as f:
+    #     test_data = json.load(f)
+    with open("../brenda_data/filter_data/train.json", "r") as f:
         train_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/valid_reaction.json", "r") as f:
+    with open("../brenda_data/filter_data/valid.json", "r") as f:
         valid_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/test_reaction.json", "r") as f:
+    with open("../brenda_data/filter_data/test.json", "r") as f:
         test_data = json.load(f)
     return train_data, valid_data, test_data
 
@@ -50,6 +74,7 @@ def check_same_data(train, valid, test):
 
 valid_data,test_data = check_same_data(train_data,valid_data,test_data)
 
+print(len(train_data ) +len(valid_data ) +len(test_data )  )
 
 cset,eset, e2id,c2id = build_dict_for_double_data(train_data)
 
@@ -82,5 +107,5 @@ graph_info = {
 }
 graph_info.update(sing_graph)
 
-torch.save(graph_info,"../pre_handle_data/brenda_dataset_reaction_clean_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/brenda_dataset_reaction_clean_train_info.pkl")
+torch.save(graph_info,"../pre_handle_data/brenda_small_no_e_graph_info.pkl")
+torch.save(train_info,"../pre_handle_data/brenda_small_no_e_train_info.pkl")

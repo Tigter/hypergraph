@@ -211,7 +211,7 @@ if __name__=="__main__":
     # 读取4个数据集
     setup_seed(20)
     args = set_config()
-    with open('./config/hypergraph_brenda_06.yml','r', encoding='utf-8') as f:
+    with open('./config/hypergraph_brenda_lowf.yml','r', encoding='utf-8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         baseConfig = config['baseConfig']
         modelConfig = config[args.configName]

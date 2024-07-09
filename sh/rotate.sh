@@ -43,11 +43,10 @@ CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test
 CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 200 --learning_rate 0.0001 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/ComplEx_attention_only_relion_0325_07 &
 CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 200 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/ComplEx_attention_only_relion_0325_08 &
 
-
 CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 8 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_ComplEx_attention_only_relion_0330_01 &
 CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 8 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_DistMult_attention_only_relion_0330_01 &
 
-CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0000 --gamma 8 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_RotatE_attention_only_relion_0330_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0000 --gamma 8 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/   &
 CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0000 --gamma 8 --learning_rate 0.0001 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_RotatE_attention_only_relion_0330_02 &
 CUDA_VISIBLE_DEVICES=0 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0000 --gamma 16 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_RotatE_attention_only_relion_0330_03 &
 CUDA_VISIBLE_DEVICES=0 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0000 --gamma 24 --learning_rate 0.0005 --mode ComplEx --save_path /home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_RotatE_attention_only_relion_0330_04 &
@@ -67,3 +66,48 @@ CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test
 
 CUDA_VISIBLE_DEVICES=5 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/models/relation/Filtered_data_Paire_attention_clean_0411_01 &
 CUDA_VISIBLE_DEVICES=5 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/models/relation/Filtered_data_Paire_attention_clean_0411_02 &
+
+
+CUDA_VISIBLE_DEVICES=5 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/models/relation/Filtered_data_Paire_attention_clean_0411_01 &
+CUDA_VISIBLE_DEVICES=5 nohup python relation_predict_v2.py --cuda --train --test --batch_size 2048 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/models/relation/Filtered_data_Paire_attention_clean_0411_02 &
+
+
+# 新数据集结果
+CUDA_VISIBLE_DEVICES=0 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_Paire_attention_0625_01 &
+CUDA_VISIBLE_DEVICES=0 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_Paire_attention_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_ComplEx_attention_0625_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_ComplEx_attention_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_RotatE_attention_0625_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_RotatE_attention_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_Paire_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_Paire_mean_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_lowf_Paire_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_lowf_Paire_mean_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_lowf_ComplEx_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_lowf_ComplEx_mean_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/debug_test &
+
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_small_lowf_ComplEx_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_small_lowf_ComplEx_mean_0625_02 &
+
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_small_lowf_Paire_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 15 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_small_lowf_Paire_mean_0625_02 &
+
+
+CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_clean_ComplEx_mean_0625_01 &
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_clean_Paire_mean_0625_01 &
+

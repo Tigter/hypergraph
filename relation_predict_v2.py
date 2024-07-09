@@ -44,16 +44,58 @@ def trans2id(train_data, entity_dict,relation_dict ):
         train_id_data.append((left_id, right_id, relation_dict[e]))
     return train_id_data
 
+# def load_data():
+
+#     with open("./brenda_data_lowf/train.json") as f:
+#         train_data = json.load(f)
+#     with open("./brenda_data_lowf/valid.json") as f:
+#         valid_data = json.load(f)
+#     with open("./brenda_data_lowf/test.json") as f:
+#         test_data = json.load(f)
+    
+#     with open("./brenda_data_lowf/reaction_entity.dict") as f:
+#         datas = f.readlines()
+#         entity_dict = {}
+#         for line in datas:
+#             key,value = line.split("\t")
+#             key = key.strip()
+#             value = int(value.strip())
+#             entity_dict[key] = value
+
+#     with open("./brenda_data_lowf/reaction_relation.dict") as f:
+#         datas = f.readlines()
+#         relation_dict = {}
+#         for line in datas:
+#             key,value = line.split("\t")
+#             key = key.strip()
+#             value = int(value.strip())
+#             relation_dict[key] = value
+           
+    
+#     train_id_data = trans2id(train_data, entity_dict, relation_dict)
+#     valid_id_data = trans2id(valid_data, entity_dict, relation_dict)
+#     test_id_data = trans2id(test_data, entity_dict, relation_dict)
+
+#     datas = {
+#         "train":train_id_data,
+#         "valid":valid_id_data,
+#         "test": test_id_data,
+#         "nentity": len(entity_dict),
+#         "nrelation": len(relation_dict),
+#         "all_true_triples" : train_id_data + valid_id_data + test_id_data
+#     }
+#     return datas
+
 def load_data():
 
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/train_reaction.json") as f:
+    with open("./brenda_data_all/train.json") as f:
         train_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_valid.json") as f:
+    with open("./brenda_data_all//valid.json") as f:
         valid_data = json.load(f)
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/clean_test.json") as f:
+    with open("./brenda_data_all//test.json") as f:
         test_data = json.load(f)
     
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/reaction_entity.dict") as f:
+    with open("./brenda_data_all//reaction_entity.dict") as f:
         datas = f.readlines()
         entity_dict = {}
         for line in datas:
@@ -62,7 +104,7 @@ def load_data():
             value = int(value.strip())
             entity_dict[key] = value
 
-    with open("/home/skl/yl/ce_project/relation_cl/brenda_data/filter_data/reaction_relation.dict") as f:
+    with open("./brenda_data_all/reaction_relation.dict") as f:
         datas = f.readlines()
         relation_dict = {}
         for line in datas:
@@ -70,7 +112,6 @@ def load_data():
             key = key.strip()
             value = int(value.strip())
             relation_dict[key] = value
-           
     
     train_id_data = trans2id(train_data, entity_dict, relation_dict)
     valid_id_data = trans2id(valid_data, entity_dict, relation_dict)
@@ -85,15 +126,6 @@ def load_data():
         "all_true_triples" : train_id_data + valid_id_data + test_id_data
     }
     return datas
-
-
-def read_dataset(args):
-    path  = "/home/skl/yl/ce_project/relation_cl/brenda_data"
-    data = Data(path, reverse=False)
-    classTest_data = None
-    # if args.do_test_class:
-    #     classTest_data = Data(args.data_path, dataType="ClassTest")
-    return data, classTest_data
 
 def bi_nagativeSampleDataset(train_triples,nentity,nrelation, args):
     train_dataloader_head = DataLoader(
@@ -179,6 +211,55 @@ def buildOptimizer(name):
     }
     return name_to_optimizer[name]
 
+def test_pair(model):
+    with open("./brenda_small_lowf/test_pair.json") as f:
+        pairs = json.load(f)
+
+    with open("./brenda_small_lowf/reaction_entity.dict") as f:
+        datas = f.readlines()
+        entity_dict = {}
+        for line in datas:
+            key,value = line.split("\t")
+            key = key.strip()
+            value = int(value.strip())
+            entity_dict[key] = value
+
+    with open("./brenda_small_lowf/reaction_relation.dict") as f:
+        datas = f.readlines()
+        relation_dict = {}
+        for line in datas:
+            key,value = line.split("\t")
+            key = key.strip()
+            value = int(value.strip())
+            relation_dict[key] = value
+    pair_ids = []
+    for data in pairs:
+        pair_ids.append((entity_dict[data[0]],relation_dict[data[1]]))
+    result = {
+        "Hit1":0,
+        "Hit3":0,
+        "Hit10":0
+    }
+
+    for data in pair_ids:
+        c_ids = [data[0] for i in range(len(relation_dict))]
+        e_ids = [i for i in range(len(relation_dict))]
+        c_emb = model.entity_embedding(torch.LongTensor(c_ids).cuda())
+        e_emb = model.relation_embedding(torch.LongTensor(e_ids).cuda())
+        score = torch.sum(c_emb*e_emb,dim=1)
+        sorted_indices = torch.argsort(score, descending=True)
+        rank = (sorted_indices == data[1]).nonzero().item()
+        if rank <= 1:
+            result["Hit1"] += 1
+        if rank <= 3:
+            result["Hit3"] += 1
+        if rank <= 10:
+            result["Hit10"] += 1
+    result["Hit1"] = result["Hit1"]/len(pair_ids)
+    result["Hit3"] = result["Hit3"]/len(pair_ids)
+    result["Hit10"] = result["Hit10"]/len(pair_ids) 
+    print(result)
+
 def main(args):
    
     if args.train and args.save_path is None:
@@ -207,19 +288,21 @@ def main(args):
     
     args.nentity = data["nentity"]
     args.nrelation = data["nrelation"]
-
+    # args.init_checkpoint = "/home/skl/yl/ce_project/relation_cl/models/models/relation/Filtered_data_ComplEx_attention_clean_0411_03/hit10"
     if args.init_checkpoint:
         logging.info('Loading checkpoint %s...' % args.init_checkpoint)
         checkpoint = torch.load(os.path.join(args.init_checkpoint, 'checkpoint'))
         args.init_step = checkpoint['step']
-        model.load_state_dict(checkpoint['model_state_dict'])
-        if args.train:
-            current_learning_rate = checkpoint['current_learning_rate']
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        model.load_state_dict(checkpoint['model_state_dict'],strict=False)
+        # if args.train:
+        #     current_learning_rate = checkpoint['current_learning_rate']
+        #     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     else:
         logging.info('Ramdomly Initializing %s Model...' % args.model)
         args.init_step = 0
     
+    # test_pair(model)
+
     step = args.init_step
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)

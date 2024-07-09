@@ -18,6 +18,8 @@ from loss import *
 import torch.utils.data
 from transformers import T5Tokenizer
 
+from loss import *
+
 
 
 class MLPModel(torch.nn.Module):
@@ -53,7 +55,7 @@ class HyperGraphV3(Module):
         self.e_num = graph_info["e_num"]
 
 
-        self.rel_emb = nn.Embedding(self.e_num, hidden_dim)
+        self.rel_emb = nn.Embedding(self.e_num, hidden_dim*2)
         self.node_emb = nn.Embedding(self.c_num, hidden_dim)
 
         init_range =  6.0 / math.sqrt(hidden_dim)
@@ -70,7 +72,7 @@ class HyperGraphV3(Module):
         # )
         self.mse_loss = nn.MSELoss()
         # self.node_encoder = TrfmSeq2seq(len(NodeGnnDataset.vocab),config["transformer_dim"], len(NodeGnnDataset.vocab), config["transformer_layer"]).cuda()
-        self.tokenizer = T5Tokenizer.from_pretrained("/home/skl/yl/ce_project/relation_cl/core/mollm/pretrain_model/MoleculeCaption/molt5-base-smiles2caption/", model_max_length=512)
+        # self.tokenizer = T5Tokenizer.from_pretrained("/home/skl/yl/ce_project/relation_cl/core/mollm/pretrain_model/MoleculeCaption/molt5-base-smiles2caption/", model_max_length=512)
         # self.node_encoder = GinDecoder(has_graph=False, MoMuK=False, model_size="base", use_3d=True)
         # for name, parameter in self.node_encoder.named_parameters():
         #     parameter.requires_grad = False
@@ -89,6 +91,7 @@ class HyperGraphV3(Module):
             torch.nn.Sigmoid()
         )
         self.loss_funcation = nn.CrossEntropyLoss()
+        # self.loss_funcation = NSSAL(gamma=9,plus_gamma=True)
 
         # self.ce_predictor = torch.nn.Sequential(
         #     torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
@@ -210,12 +213,11 @@ class HyperGraphV3(Module):
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
         
-        # 给超边增加噪声
-        head_noise = self.sample_noise(head_emb)
-        tail_noise = self.sample_noise(tail_emb)
-
-        head_emb = head_emb + head_noise
-        tail_emb = tail_emb + tail_noise
+        if add_noise:
+            head_noise = self.sample_noise(head_emb)
+            tail_noise = self.sample_noise(tail_emb)
+            head_emb = head_emb + head_noise
+            tail_emb = tail_emb + tail_noise
 
         return self.realtion_predict(head_emb, relation_emb, tail_emb)
 
@@ -226,6 +228,14 @@ class HyperGraphV3(Module):
         emb = torch.cat([head, tail],dim=1)
         emb = self.dropout(emb)
         score = self.ce_predictor(emb)
+        return score
+    
+    def paire_score(self, head, relation, tail):
+        re_head, re_tail= torch.chunk(relation, 2, dim=-1)
+        head = F.normalize(head, 2, -1)
+        tail = F.normalize(tail, 2, -1)
+        score = head * re_head - tail * re_tail
+        score = - torch.norm(score, p=1, dim=2)
         return score
 
     def realtion_predict_all(self, head, relation, tail):
@@ -338,18 +348,20 @@ class HyperGraphV3(Module):
 
         head_out, cl_head = head_out
         tail_out, cl_tail = tail_out
+        
         # base loss
         head_emb = model.single_emb(head_out)
         tail_emb = model.single_emb(tail_out)
         pos_score = model.full_score(head_emb, relation, tail_emb)
+        # negative_sample = negative_sample.cuda()
+        # neg_score = model.full_score(head_emb, negative_sample, tail_emb)
+
         loss = model.loss_funcation(pos_score,relation)
         logs = {    
             "loss": loss.item(),
             
         }
-        add_entity_noise = False
-        add_edge_noise = True
-
+     
         if config["add_entity_noise"]:
             head_emb_noise = model.single_emb(head_out,add_noise=True)
             tail_emb_noise = model.single_emb(tail_out,add_noise=True)

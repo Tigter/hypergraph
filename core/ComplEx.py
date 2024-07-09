@@ -13,27 +13,28 @@ class ComplEx(nn.Module):
         self.n_relation = n_relation
         self.epsilon = 2
         self.entity_dim = dim
-        self.relation_dim = dim*2
+        self.relation_dim = dim
         self.entity_embedding = nn.Embedding(n_entity, self.entity_dim)
         self.relation_embedding = nn.Embedding(n_relation,self.relation_dim)
 
-        # self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.relation_dim,self.entity_dim)),dtype=torch.float))
-        # self.input_dropout = torch.nn.Dropout(0.5)
-        # self.hidden_dropout1 = torch.nn.Dropout(0.5)
-        # self.hidden_dropout2 = torch.nn.Dropout(0.5)
+        self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.relation_dim,self.entity_dim)),dtype=torch.float))
+        self.input_dropout = torch.nn.Dropout(0.5)
+        self.hidden_dropout1 = torch.nn.Dropout(0.5)
+        self.hidden_dropout2 = torch.nn.Dropout(0.5)
 
-        # self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
-        # self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
 
-        self.aggr = aggr.AttentionalAggregation(
-            torch.nn.Sequential(
-                torch.nn.Linear(self.entity_dim, 1),
-                torch.nn.Sigmoid()
-            ), 
-            torch.nn.Sequential(
-                torch.nn.Linear(self.entity_dim,self.entity_dim),
-                torch.nn.Sigmoid())
-        )
+        # self.aggr = aggr.AttentionalAggregation(
+        #     torch.nn.Sequential(
+        #         torch.nn.Linear(self.entity_dim, 1),
+        #         torch.nn.Sigmoid()
+        #     ), 
+        #     torch.nn.Sequential(
+        #         torch.nn.Linear(self.entity_dim,self.entity_dim),
+        #         torch.nn.Sigmoid())
+        # )
+        self.aggr = aggr.MeanAggregation()
         if gamma != None:
             self.embedding_range = (gamma + 2)/dim
             nn.init.uniform_(
@@ -104,7 +105,7 @@ class ComplEx(nn.Module):
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
         
-        return self.paire_score(head_emb, relation, tail_emb)
+        return self.complex_score(head_emb, relation, tail_emb)
 
 
     def paire_score(self, head, relation, tail):
@@ -116,6 +117,7 @@ class ComplEx(nn.Module):
         score = head * re_head - tail * re_tail
         score = - torch.norm(score, p=1, dim=2)
         return score
+    
     def complex_score(self, head, relation, tail):
         head_re, head_im = head.chunk(2, -1)               # (batch,1,dim), (batch,n,dim),  (1,n_e,dim)
         relation_re, relation_im = relation.chunk(2, -1)   # (batch,1,dim)

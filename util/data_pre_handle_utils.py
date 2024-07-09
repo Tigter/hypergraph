@@ -202,17 +202,16 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
 
 
     # 共享酶之间的超边
-    shareE_node1 , shareE_node, shareE_edge_type = share_e(train_e2Hy_index[0],train_e2Hy_index[1], c_num)
+    # shareE_node1 , shareE_node, shareE_edge_type = share_e(train_e2Hy_index[0],train_e2Hy_index[1], c_num)
 
     # 构建完成训练集当中所有超边的连接
-    edge_index_row = torch.cat([share_entity_row_entity, shareE_node1],dim=-1)
-    edge_index_col = torch.cat([share_entity_col_entity, shareE_node],dim=-1)
-    edge_type_train = torch.cat([edge_type_node, shareE_edge_type],dim=-1)
+    edge_index_row = torch.cat([share_entity_row_entity],dim=-1)
+    edge_index_col = torch.cat([share_entity_col_entity],dim=-1)
+    edge_type_train = torch.cat([edge_type_node],dim=-1)
     edge_index_train = torch.stack([
         edge_index_row ,
         edge_index_col
     ])
-
 
     # 把测试集和训练图连接起来：通过共享化合物来实现
     val_c_node_temp =  valid_c2Hy_index[0] + test_c2Hy_index[0]
