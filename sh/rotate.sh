@@ -109,5 +109,13 @@ CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test
 
 
 CUDA_VISIBLE_DEVICES=4 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_clean_ComplEx_mean_0625_01 &
-CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_clean_Paire_mean_0625_01 &
+
+CUDA_VISIBLE_DEVICES=3 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_Paire_mean_0728_01 &
+
+CUDA_VISIBLE_DEVICES=1 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_hlf_Paire_mean_0728_01 &
+
+CUDA_VISIBLE_DEVICES=7 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_hlf_Complex_mean_0811_01 &
+
+CUDA_VISIBLE_DEVICES=7 nohup python relation_predict_v2.py --cuda --train --test --batch_size 1024 --regularization 0.0005 --gamma 10 --learning_rate 0.0005 --mode ComplEx --save_path ./models/relation/brenda_data_all_hlf_TransE_mean_0811_01 &
+
 

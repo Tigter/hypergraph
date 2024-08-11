@@ -12,8 +12,8 @@ class ComplEx(nn.Module):
         self.n_entity = n_entity
         self.n_relation = n_relation
         self.epsilon = 2
-        self.entity_dim = dim
-        self.relation_dim = dim
+        self.entity_dim = dim*2
+        self.relation_dim = dim*2
         self.entity_embedding = nn.Embedding(n_entity, self.entity_dim)
         self.relation_embedding = nn.Embedding(n_relation,self.relation_dim)
 
@@ -86,7 +86,6 @@ class ComplEx(nn.Module):
         if mode == "h_rt":
             head_emb = head_emb.reshape(batch_size,-1,self.entity_dim)
 
-
         tail_emb = self.entity_embedding(tail)
         tail_index = tail_index.squeeze(1)
         # tail_emb = scatter_mean(tail_emb,tail_index, dim=0)
@@ -128,6 +127,12 @@ class ComplEx(nn.Module):
         result = score_re * tail_re + score_im * tail_im
         score = torch.sum(result,dim=-1)
         return score
+
+    def transe_score(self, head, relation, tail):
+        score = head + relation - tail
+        score = torch.norm(score, p=1, dim=2)
+        return -score
+       
 
     def dist_mult_score(self, head, relation, tail):
         socre = head *  tail * relation

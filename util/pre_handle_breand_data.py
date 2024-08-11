@@ -36,11 +36,17 @@ def load_brenda_data():
     #     valid_data = json.load(f)
     # with open("../brenda_all_highf/test.json", "r") as f:
     #     test_data = json.load(f)
-    with open("../brenda_data/filter_data/train.json", "r") as f:
+    # with open("../brenda_data/filter_data/train.json", "r") as f:
+    #     train_data = json.load(f)
+    # with open("../brenda_data/filter_data/valid.json", "r") as f:
+    #     valid_data = json.load(f)
+    # with open("../brenda_data/filter_data/test.json", "r") as f:
+    #     test_data = json.load(f)
+    with open("../brenda_07/all/train.json", "r") as f:
         train_data = json.load(f)
-    with open("../brenda_data/filter_data/valid.json", "r") as f:
+    with open("../brenda_07/all/valid.json", "r") as f:
         valid_data = json.load(f)
-    with open("../brenda_data/filter_data/test.json", "r") as f:
+    with open("../brenda_07/all/test.json", "r") as f:
         test_data = json.load(f)
     return train_data, valid_data, test_data
 
@@ -74,7 +80,7 @@ def check_same_data(train, valid, test):
 
 valid_data,test_data = check_same_data(train_data,valid_data,test_data)
 
-print(len(train_data ) +len(valid_data ) +len(test_data )  )
+print(len(train_data ) +len(valid_data ) +len(test_data ))
 
 cset,eset, e2id,c2id = build_dict_for_double_data(train_data)
 
@@ -83,18 +89,15 @@ c_num = len(cset)
 e_num = len(eset)
 
 
-
 # 开始构建超图
 base_node_num = c_num + e_num
 edge_id = 0
-
+print("begin single_graph")
 sing_graph, train_info =  build_single_graph(train_data,valid_data,test_data, c2id, e2id, base_node_num)
-
 
 # 重新构建一个超图数据
 # 首先需要将ko 的 id 和 层次lable 进行混合编码：
 # 构造一个空白的embedding 作为 0（这个地方存疑）
-
 graph_info = {
     "c_num": c_num,
     "e_num": e_num,
@@ -107,5 +110,5 @@ graph_info = {
 }
 graph_info.update(sing_graph)
 
-torch.save(graph_info,"../pre_handle_data/brenda_small_no_e_graph_info.pkl")
-torch.save(train_info,"../pre_handle_data/brenda_small_no_e_train_info.pkl")
+torch.save(graph_info,"../pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_graph_info.pkl")
+torch.save(train_info,"../pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_train_info.pkl")

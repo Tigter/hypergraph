@@ -90,7 +90,7 @@ class HyperGraphV3(Module):
             torch.nn.Linear(hyperkgeConfig.embedding_dim*2, self.e_num),
             torch.nn.Sigmoid()
         )
-        self.loss_funcation = nn.CrossEntropyLoss()
+        self.loss_funcation = nn.BCELoss()
         # self.loss_funcation = NSSAL(gamma=9,plus_gamma=True)
 
         # self.ce_predictor = torch.nn.Sequential(
@@ -101,12 +101,12 @@ class HyperGraphV3(Module):
 
         self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.entity_dim,self.entity_dim)),dtype=torch.float))
 
-        # self.input_dropout = torch.nn.Dropout(0.8)
-        # self.hidden_dropout1 = torch.nn.Dropout(0.8)
-        # self.hidden_dropout2 = torch.nn.Dropout(0.8)
+        self.input_dropout = torch.nn.Dropout(0.8)
+        self.hidden_dropout1 = torch.nn.Dropout(0.8)
+        self.hidden_dropout2 = torch.nn.Dropout(0.8)
 
-        # self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
-        # self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
 
         # self.box = BoxLevel(5406,1, self.entity_dim)
 
@@ -202,10 +202,14 @@ class HyperGraphV3(Module):
         return noise
 
     def full_score(self, head_emb, relation, tail_emb,add_noise=False):
-        relation_emb = self.rel_emb(relation)
-        # relation_emb = None
-        if len(relation_emb.shape) == 2:
-            relation_emb = relation_emb.unsqueeze(1)
+        
+        if relation is not None:
+            relation_emb = self.rel_emb(relation)
+            if len(relation_emb.shape) == 2:
+                relation_emb = relation_emb.unsqueeze(1)
+        else:
+            relation_emb = None
+        
 
         if len(head_emb.shape) == 2:
             head_emb = head_emb.unsqueeze(1)
@@ -218,8 +222,7 @@ class HyperGraphV3(Module):
             tail_noise = self.sample_noise(tail_emb)
             head_emb = head_emb + head_noise
             tail_emb = tail_emb + tail_noise
-
-        return self.realtion_predict(head_emb, relation_emb, tail_emb)
+        return self.paire_score(head_emb, relation_emb, tail_emb)
 
     def realtion_predict(self, head, relation, tail):
         head = head.reshape(head.shape[0],-1)
@@ -353,15 +356,24 @@ class HyperGraphV3(Module):
         head_emb = model.single_emb(head_out)
         tail_emb = model.single_emb(tail_out)
         pos_score = model.full_score(head_emb, relation, tail_emb)
-        # negative_sample = negative_sample.cuda()
-        # neg_score = model.full_score(head_emb, negative_sample, tail_emb)
 
-        loss = model.loss_funcation(pos_score,relation)
+        # pos_score = pos_score.unsqueeze(-1)
+        # lable shapre = len(head)* (1 + len(negative_sample))
+        # lable = torch.zeros(len(head), 1 + len(negative_sample[0]))
+        # lable[:, 0] = 1 
+        # lable = lable.cuda()
+
+        negative_sample = negative_sample.cuda()
+        neg_score = model.full_score(head_emb, negative_sample, tail_emb)
+
+        # score = torch.cat([pos_score,neg_score],dim=-1)
+        # loss = model.loss_funcation(score,lable)
+
+        # loss = model.loss_funcation(pos_score,relation)
+        loss = model.loss_funcation(pos_score,neg_score)
         logs = {    
             "loss": loss.item(),
-            
         }
-     
         if config["add_entity_noise"]:
             head_emb_noise = model.single_emb(head_out,add_noise=True)
             tail_emb_noise = model.single_emb(tail_out,add_noise=True)
@@ -381,17 +393,6 @@ class HyperGraphV3(Module):
             logs["mse_loss"] = mse_loss.item()*config["noise_weight"] 
             logs["noise_loss"] = noise_loss.item()
 
-        # if True:
-
-        #     if len(pos_score.shape) != len(neg_score.shape):
-        #         pos_score = pos_score.unsqueeze(1)
-        #     score = torch.cat([pos_score,neg_score],dim=1)
-        #     label = model.label.repeat(score.shape[0],1).cuda()
-        #     loss = model.loss_funcation(score,label)
-        # else:
-        #     loss = loss_funcation(pos_score, neg_score)
-
-
         add_cl = False
         if config["add_edge_cl"]:
             base,pos,weight,base_out,pos_out = next(cl_dataset)
@@ -401,72 +402,10 @@ class HyperGraphV3(Module):
             loss += config["cl_weight"]*cl_loss
             logs["cl_loss"] = cl_loss.item() * config["cl_weight"]
 
-        if config["reg_weight"] != 0.0:
-            reg = model.reg_l2()
-            logs["reg"] = reg * config["reg_weight"]
-            loss += reg * config["reg_weight"]
+        # if config["reg_weight"] != 0.0:
+        #     reg = model.reg_l2()
+        #     logs["reg"] = reg * config["reg_weight"]
+        #     loss += reg * config["reg_weight"]
         loss.backward()
         optimizer.step()
         return logs
-
-    @staticmethod
-    def train_boxlevel_step(model, train_iterator,loss_function):
-        '''
-        A single train step. Apply back-propation and return the loss
-        '''
-        model.train()
-        positive_sample,negative_sample, subsampling_weight, mode = next(train_iterator)
-
-        if True:
-            positive_sample = positive_sample.cuda()
-            negative_sample = negative_sample.cuda()
-            subsampling_weight = subsampling_weight.cuda()
-        
-        h = positive_sample[:,0]
-        r = positive_sample[:,1]
-        t = positive_sample[:,2]
-
-
-        p_val, p_insert = model(h,r,t)
-        if mode == 'hr_t':
-            neg_val, neg_insert = model(h,r, negative_sample, mode=mode)
-        else:
-            neg_val, neg_insert = model(negative_sample,r,t, mode=mode)
-
-        p_score =  p_insert + p_val
-        n_score = neg_insert
-
-        loss = loss_function(p_score, n_score,subsampling_weight)
-        return loss
-    @staticmethod
-    def train_typeOf_step(model, train_iterator, loss_function,):
-        def typeOf_score(model, h,t):
-            batch_size = h.shape[0]
-            entity_emb = model.node_emb(h+model.e_num)
-
-            type_emb = model.box.entity_embedding[t].box_reshape((batch_size,-1,model.entity_dim))
-
-            entity_emb = entity_emb.unsqueeze(1)
-
-            entity_emb =  torch.tanh(entity_emb) 
-            tail_emb =  torch.tanh(type_emb.centre) 
-
-            score = entity_emb - tail_emb
-            score = torch.norm(score,dim=-1)
-            return -score
-
-        positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
-
-        if True:
-            positive_sample = positive_sample.cuda()
-            negative_sample = negative_sample.cuda()
-            subsampling_weight = subsampling_weight.cuda()
-
-        h = positive_sample[:,0]
-        r = positive_sample[:,1]
-        t = positive_sample[:,2]
-        negative_score = typeOf_score(model,h,negative_sample)
-        positive_score = typeOf_score(model,h,t)
-        loss = loss_function(positive_score, negative_score, subsampling_weight)
-
-        return loss

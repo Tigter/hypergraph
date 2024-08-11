@@ -78,6 +78,32 @@ def build_hyedge(data, c2id, e2id,clist2edgeId):
 
     return hyId_list, c2Hyper_index, e2Hyper_index, hy2e
 
+def build_hyedge_ne(data, c2id, e2id,clist2edgeId):
+    hyId_list = []
+    hy_c_node = []
+    hy_c_edge = []
+
+
+    for left,right in data:
+        # 化合物到超边
+        left = tuple(sorted(left))
+        right = tuple(sorted(right))
+        edge_id = clist2edgeId[left]
+        for c in list(left):
+            hy_c_node.append(c2id[c])
+            hy_c_edge.append(edge_id)
+        hyId_list.append(edge_id)
+
+        edge_id = clist2edgeId[right]
+        for c in list(right):
+            hy_c_node.append(c2id[c])
+            hy_c_edge.append(edge_id)
+        hyId_list.append(edge_id)
+     
+    c2Hyper_index =  [hy_c_node,hy_c_edge ]
+
+    return hyId_list, c2Hyper_index
+
 
 def build_share_node_index(node_id, edge_id, edge_id_start, max_node_edge, max_edge_id):
     edge_id = [e - edge_id_start for e in edge_id] # id 的下标为0
@@ -150,7 +176,25 @@ def transe_single2id(datas, e2id, clist2edgeId, edge_id_start):
         single_train.append((right,e))
     return train_triples, single_train, clist2edgeId, edge_id
 
-def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_id):
+def transe_single2id_ne(datas, e2id, clist2edgeId, edge_id_start):
+    train_triples = []
+    edge_id = edge_id_start
+
+    for left, right in datas:
+        left = tuple(sorted(left))
+        right = tuple(sorted(right))
+
+        if left not in clist2edgeId:
+            clist2edgeId[left] = edge_id
+            edge_id += 1
+
+        if right not in clist2edgeId:
+            clist2edgeId[right] = edge_id
+            edge_id += 1
+        train_triples.append((clist2edgeId[left], clist2edgeId[right]))
+    return train_triples , clist2edgeId, edge_id
+
+def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_id,ne_list):
     '''
         data: left, right e 组成的数据利润表
 
@@ -168,6 +212,9 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
 
     test_triples, single_test, clist2edgeId, edge_id = transe_single2id(valid_data, e2id, clist2edgeId,edge_id)
 
+    ne_triples, clist2edgeId, edge_id = transe_single2id_ne(ne_list, e2id, clist2edgeId,edge_id)
+
+
     print("edge end id : ", edge_id)
 
     # 超边的数量
@@ -178,11 +225,12 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
     train_id_list, train_c2Hy_index, train_e2Hy_index, Hy2E = build_hyedge(single_train, c2id, e2id,clist2edgeId)
     valid_id_list, valid_c2Hy_index, valid_e2Hy_index, validHy2E = build_hyedge(single_valid, c2id, e2id,clist2edgeId)
     test_id_list, test_c2Hy_index, test_e2Hy_index, testHy2E = build_hyedge(single_test, c2id, e2id,clist2edgeId)
+    ne_id_list, ne_c2Hy_index =   build_hyedge_ne(ne_list, c2id, e2id,clist2edgeId)
 
     # 构建实体到超边的连接
     # 全部的超边连接
-    entity_edge = train_c2Hy_index[1] + valid_c2Hy_index[1] + test_c2Hy_index[1]
-    entity = train_c2Hy_index[0] + valid_c2Hy_index[0] + test_c2Hy_index[0]
+    entity_edge = train_c2Hy_index[1] + valid_c2Hy_index[1] + test_c2Hy_index[1] + ne_c2Hy_index[1]
+    entity = train_c2Hy_index[0] + valid_c2Hy_index[0] + test_c2Hy_index[0] + ne_c2Hy_index[0]
     v2e_all_index = torch.stack([torch.as_tensor(entity, dtype=torch.long), torch.as_tensor(entity_edge, dtype=torch.long)])
     e2v_all_index = torch.stack([torch.as_tensor(entity_edge, dtype=torch.long), torch.as_tensor(entity, dtype=torch.long)])
 
@@ -233,8 +281,8 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
     ])
 
     # 把测试集和训练图连接起来：通过共享化合物来实现
-    val_c_node_temp =  valid_c2Hy_index[0] + test_c2Hy_index[0]
-    val_r_edge_temp = [c - edge_start_id for c in list(valid_c2Hy_index[1] + test_c2Hy_index[1])]
+    val_c_node_temp =  valid_c2Hy_index[0] + test_c2Hy_index[0] + ne_c2Hy_index[0]
+    val_r_edge_temp = [c - edge_start_id for c in list(valid_c2Hy_index[1] + test_c2Hy_index[1] + ne_c2Hy_index[1])]
 
     edge2entity_valid = coo_matrix((
         np.ones(len(val_c_node_temp)),
@@ -255,6 +303,11 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
     for left,e,right in test_triples:
         left_edge_set.add(left)
         right_edge_set.add(right)
+
+    for left, right in ne_triples:
+        left_edge_set.add(left)
+        right_edge_set.add(right)
+    
     count = 0
     print("计算共享化合物的超边类型: ", len(share_entity_row))
     for i in  tqdm.tqdm(range(len(share_entity_row))):
@@ -302,10 +355,12 @@ def build_single_graph(train_data,valid_data, test_data, c2id, e2id, edge_start_
         "train_id_list": train_id_list,
         "valid_id_list": valid_id_list,
         "test_id_list": test_id_list,
+        "ne_id_list": ne_id_list,
 
         "train_triple": train_triples,
         "valid_triple": valid_triples,
-        "test_triple": test_triples,     
+        "test_triple": test_triples, 
+        "ne_triple": ne_triples   
         # "edgeid2label": Hy2E,
     }
     return sing_graph, train_info

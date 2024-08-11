@@ -20,8 +20,17 @@ from util.smiles.transormer_util import *
 def load_data():
     # graph_info = torch.load("./pre_handle_data/brenda_small_dataset_reaction_filter_lowf_graph_info.pkl")
     # train_info = torch.load("./pre_handle_data/brenda_small_dataset_reaction_filter_lowf_train_info.pkl")
-    graph_info = torch.load("./pre_handle_data/brenda_all_highf_dataset_reaction_graph_info.pkl")
-    train_info = torch.load("./pre_handle_data/brenda_all_highf_dataset_reaction_train_info.pkl")
+    # graph_info = torch.load("./pre_handle_data/brenda_small_no_e_add_edge_type_graph_info.pkl")
+    # train_info = torch.load("./pre_handle_data/brenda_small_no_e_add_edge_type_train_info.pkl")
+    # 大数据集过滤高频和低频
+    # graph_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_graph_info.pkl")
+    # train_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_train_info.pkl")
+    # 大数据集全量数据
+    # graph_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_no_e_add_edge_type_graph_info.pkl")
+    # train_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_no_e_add_edge_type_train_info.pkl")
+    # 大数据集加入了 没有酶的数据
+    graph_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_add_ne_reaction_graph_info.pkl")
+    train_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_add_ne_reaction_train_info.pkl")
     return graph_info, train_info
 
 def build_graph_sampler(config):
@@ -36,8 +45,6 @@ def build_graph_sampler(config):
     edge2id2cList = {
         clist2edgeId[key] :key  for key in clist2edgeId.keys()
     }
-    print(len(edge2id2cList))
-
 
     sampler = CEGraphSampler(graph_info, train_info, 
             batch_size=config["batch_size"],
@@ -91,9 +98,34 @@ def build_graph_sampler(config):
     cl_dataset = None   
     return train_dataset,valid_dataset,test_dataset,graph_info,train_info, None, None,train_test,cl_dataset#smileGraphDataset,clDataset
 
+def build_graph_sampler_ne_predict(config):
+    graph_info, train_info = load_data()
+    base_node_num = graph_info["base_node_num"]
+
+    c_num, e_num = graph_info["c_num"],graph_info["e_num"]
+    e2id, c2id = graph_info["e2id"],graph_info["c2id"]
+
+    index2e = {
+        e2id[key] - c_num:key  for key in e2id.keys()
+    }
+
+    n_hyedge = len(graph_info["clist2edgeId"])
+    clist2edgeId = graph_info["clist2edgeId"]
+    edge2id2cList = {
+        clist2edgeId[key] :key  for key in clist2edgeId.keys()
+    }
+    
+    valid_sampler = CEGraphSampler(graph_info, train_info, 
+            batch_size=16,
+            size=config["test_neibor_size"],
+            mode="valid"
+    )
+    
+    return graph_info,train_info,clist2edgeId,valid_sampler,index2e,e_num
+
 class NagativeRelationSampleDataset(Dataset):
 
-    def __init__(self, triples, nentity, nrelation, negative_sample_size, graph_sampler, e_num):
+    def __init__(self, triples, nentity, nrelation, negative_sample_size, graph_sampler, c_num):
 
         self.len = len(triples)
         self.triples = triples
@@ -102,9 +134,9 @@ class NagativeRelationSampleDataset(Dataset):
         self.nentity = nentity
         self.nrelation = nrelation
         self.negative_sample_size = negative_sample_size
-        self.true_realtion = self.get_true_head_and_tail(self.triple_set, e_num)
+        self.true_realtion = self.get_true_head_and_tail(self.triple_set, c_num)
         self.graph_sampler = graph_sampler
-        self.e_num = e_num
+        self.c_num = c_num
 
     def __len__(self):
         return self.len
@@ -131,7 +163,7 @@ class NagativeRelationSampleDataset(Dataset):
         negative_sample = np.concatenate(negative_sample_list)[:self.negative_sample_size]
         negative_sample = torch.LongTensor(negative_sample)
         head = torch.LongTensor([head])
-        relation = torch.LongTensor([relation]) - self.e_num
+        relation = torch.LongTensor([relation]) - self.c_num
         tail = torch.LongTensor([tail])
         
         return head,relation,tail, negative_sample, self.graph_sampler
@@ -149,13 +181,13 @@ class NagativeRelationSampleDataset(Dataset):
         return head,relation,tail,negative_sample,head_out,tail_out
     
     @staticmethod
-    def get_true_head_and_tail(triples,e_num):
+    def get_true_head_and_tail(triples,c_num):
       
         true_relation = {}
         for head, relation, tail in triples:
             if (head, tail) not in true_relation:
                 true_relation[(head, tail)] = []
-            true_relation[(head, tail)].append(relation-e_num)
+            true_relation[(head, tail)].append(relation-c_num)
            
         for head, tail in true_relation:
             true_relation[(head, tail)] = np.array(list(set(true_relation[(head, tail)])))

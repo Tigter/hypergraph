@@ -155,13 +155,13 @@ class HyperCE(nn.Module):
         self.edge_type_embedding_layer = BaseEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
-            num_edge_type=e_num+1,
+            num_edge_type=e_num+3,
             graph_info=graph_info,
         )
         self.edge_attr_embedding_layer = BaseEdgeEmbedding(
             embed_size=self.embedding_dim,
             fusion_type="add",
-            num_edge_type=e_num+1,
+            num_edge_type=e_num+3,
             graph_info=graph_info
         )
         self.E2EConvs = nn.ModuleList()

@@ -35,9 +35,11 @@ def trans2id(train_data, entity_dict,relation_dict ):
         left_id = []
         right_id = []
         for c in left:
-            left_id.append(entity_dict[c])
+            if c in entity_dict:
+                left_id.append(entity_dict[c])
         for c in right:
-            right_id.append(entity_dict[c])
+            if c in entity_dict:
+                right_id.append(entity_dict[c])
         left_id = tuple(sorted(left_id))
         right_id = tuple(sorted(right_id))
         e = e.strip()
@@ -45,7 +47,6 @@ def trans2id(train_data, entity_dict,relation_dict ):
     return train_id_data
 
 # def load_data():
-
 #     with open("./brenda_data_lowf/train.json") as f:
 #         train_data = json.load(f)
 #     with open("./brenda_data_lowf/valid.json") as f:
@@ -88,14 +89,20 @@ def trans2id(train_data, entity_dict,relation_dict ):
 
 def load_data():
 
-    with open("./brenda_data_all/train.json") as f:
+    # with open("./brenda_data_all/train.json") as f:
+    #     train_data = json.load(f)
+    # with open("./brenda_data_all//valid.json") as f:
+    #     valid_data = json.load(f)
+    # with open("./brenda_data_all//test.json") as f:
+    #     test_data = json.load(f)
+    with open("./brenda_07/all/train.json") as f:
         train_data = json.load(f)
-    with open("./brenda_data_all//valid.json") as f:
+    with open("./brenda_07/all/valid.json") as f:
         valid_data = json.load(f)
-    with open("./brenda_data_all//test.json") as f:
+    with open("./brenda_07/all/test.json") as f:
         test_data = json.load(f)
     
-    with open("./brenda_data_all//reaction_entity.dict") as f:
+    with open("./brenda_07/all/reaction_entity.dict") as f:
         datas = f.readlines()
         entity_dict = {}
         for line in datas:
@@ -104,7 +111,7 @@ def load_data():
             value = int(value.strip())
             entity_dict[key] = value
 
-    with open("./brenda_data_all/reaction_relation.dict") as f:
+    with open("./brenda_07/all/reaction_relation.dict") as f:
         datas = f.readlines()
         relation_dict = {}
         for line in datas:
@@ -341,7 +348,6 @@ def main(args):
     if args.test:
         metrics = ModelTester.test_step(model, data["test"], data["all_true_triples"], args)
         logset.log_metrics('Test',step, metrics)
-    
 
 if __name__ == '__main__':
     main(parse_args())
