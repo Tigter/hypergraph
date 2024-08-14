@@ -3,7 +3,11 @@ import json
 
 with open("./train.json") as f:
         train_data = json.load(f)
-
+with open("./valid.json") as f:
+        valid_data = json.load(f)
+with open("./test.json") as f:
+        test_data = json.load(f)
+print(len(train_data)+len(valid_data)+len(test_data))
 
 c_set = set()
 e_set = set()
@@ -44,10 +48,10 @@ relation_dict = {
      e_set[i]: i for i in range(len(e_set))
 }
 
-with open("./reaction_entity.dict","w") as f:
-     for k,v in entities_dict.items():
-          f.write("%s\t%s\n"% (k,v))
+# with open("./reaction_entity.dict","w") as f:
+#      for k,v in entities_dict.items():
+#           f.write("%s\t%s\n"% (k,v))
 
-with open("./reaction_relation.dict","w") as f:
-     for k,v in relation_dict.items():
-          f.write("%s\t%s\n"% (k,v))
+# with open("./reaction_relation.dict","w") as f:
+#      for k,v in relation_dict.items():
+#           f.write("%s\t%s\n"% (k,v))

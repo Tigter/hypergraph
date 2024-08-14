@@ -260,7 +260,7 @@ if __name__=="__main__":
          'lr': lr
         }
         ], lr=lr,
-        weight_decay=0.001,
+        # weight_decay=0.001,
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))

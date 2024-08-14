@@ -49,97 +49,84 @@ class HyperGraphV3(Module):
         self.encoder = HyperCE(hyperkgeConfig,n_node,n_hyper_edge,e_num,graph_info)
         hidden_dim = hyperkgeConfig.embedding_dim
 
-        # self.entity_dim = hyperkgeConfig.embedding_dim
+        self.entity_dim = hyperkgeConfig.embedding_dim
       
         self.c_num = graph_info["c_num"]
         self.e_num = graph_info["e_num"]
 
 
+        self.rel_emb = nn.Embedding(self.e_num, hidden_dim*2)
+        self.node_emb = nn.Embedding(self.c_num, hidden_dim)
+
+        init_range =  6.0 / math.sqrt(hidden_dim)
+        nn.init.uniform_(self.rel_emb.weight, -init_range, init_range)
+
         self.dropout = torch.nn.Dropout(p=0.5)
 
-      
+        # self.node_encoder = GNN(
+        #     num_layer=config["node_gnn_layer"],
+        #     emb_dim=hidden_dim,
+        #     gnn_type='gin',
+        #     drop_ratio=config["node_gnn_dropout"],
+        #     JK='last',
+        # )
         self.mse_loss = nn.MSELoss()
-
+        # self.node_encoder = TrfmSeq2seq(len(NodeGnnDataset.vocab),config["transformer_dim"], len(NodeGnnDataset.vocab), config["transformer_layer"]).cuda()
+        # self.tokenizer = T5Tokenizer.from_pretrained("/home/skl/yl/ce_project/relation_cl/core/mollm/pretrain_model/MoleculeCaption/molt5-base-smiles2caption/", model_max_length=512)
+        # self.node_encoder = GinDecoder(has_graph=False, MoMuK=False, model_size="base", use_3d=True)
+        # for name, parameter in self.node_encoder.named_parameters():
+        #     parameter.requires_grad = False
+        
         self.NodeGnnDataset= NodeGnnDataset
         self.clDataset = clDataset
+
         
-        gamma = 6
-        self.loss_funcation = NSSAL(gamma=gamma,plus_gamma=True)
+
+        # self.fc1 = torch.nn.Sequential(
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim * 2, hyperkgeConfig.embedding_dim),
+        #     torch.nn.ReLU()
+        # )
+        self.ce_predictor = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim*2, self.e_num),
+            torch.nn.Sigmoid()
+        )
+        # self.loss_funcation = nn.BCELoss()
+        self.loss_funcation = NSSAL(gamma=9,plus_gamma=True)
+
+        # self.ce_predictor = torch.nn.Sequential(
+        #     torch.nn.Linear(hyperkgeConfig.embedding_dim, 1),
+        #     torch.nn.Sigmoid()
+        # )
+        # self.loss_funcation = nn.BCELoss()
+
+        self.W  = nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.entity_dim, self.entity_dim,self.entity_dim)),dtype=torch.float))
+
+        self.input_dropout = torch.nn.Dropout(0.8)
+        self.hidden_dropout1 = torch.nn.Dropout(0.8)
+        self.hidden_dropout2 = torch.nn.Dropout(0.8)
+
+        self.bn0 = torch.nn.BatchNorm1d(self.entity_dim)
+        self.bn1 = torch.nn.BatchNorm1d(self.entity_dim)
+
+        # self.box = BoxLevel(5406,1, self.entity_dim)
+
+        self.q_weight = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim * 3, hyperkgeConfig.embedding_dim),
+            torch.nn.ReLU()
+        )
+        self.k_weight = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim * 3, hyperkgeConfig.embedding_dim),
+            torch.nn.ReLU()
+        )
+        self.v_weight = torch.nn.Sequential(
+            torch.nn.Linear(hyperkgeConfig.embedding_dim * 3, hyperkgeConfig.embedding_dim),
+            torch.nn.ReLU()
+        )
+
 
         label = [0.0 for i in range(401)]
         label[0]=1.0
         self.label = torch.tensor(label)
-
-        house_dim=20
-        house_num=20
-        housd_num=6
-        self.hidden_dim = int(hidden_dim / house_dim)
-        self.house_dim = house_dim
-        self.house_num = house_num
-        self.epsilon = 2.0
-        self.housd_num = housd_num
-        self.house_num = house_num + (2*self.housd_num)
-       
-        self.thred = 0.6   # fb
-
-        self.gamma = nn.Parameter(
-            torch.Tensor([gamma]), 
-            requires_grad=False
-        )
-        
-        self.embedding_range = nn.Parameter(
-            torch.Tensor([(self.gamma.item() + self.epsilon) / (self.hidden_dim * (self.house_dim ** 0.5))]),
-            requires_grad=False
-        )
-        
-        self.relation_dim = self.hidden_dim
-        self.entity_dim = self.hidden_dim
-
-        self.entity_embedding = nn.Embedding(self.c_num, self.hidden_dim * self.house_dim)
-        nn.init.uniform_(
-            tensor=self.entity_embedding.weight, 
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-        
-        self.relation_embedding = nn.Parameter(torch.zeros(self.e_num, self.relation_dim, self.house_dim*self.house_num))
-        nn.init.uniform_(
-            tensor=self.relation_embedding,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
-
-        self.k_dir_head = nn.Parameter(torch.zeros(self.e_num, 1, self.housd_num))
-        nn.init.uniform_(
-            tensor=self.k_dir_head,
-            a=-0.01,
-            b=+0.01
-        )
-        nrelation = self.e_num
-        self.k_dir_tail = nn.Parameter(torch.zeros(nrelation, 1, self.housd_num))
-        with torch.no_grad():
-            self.k_dir_tail.data = - self.k_dir_head.data
-        
-        self.k_scale_head = nn.Parameter(torch.zeros(nrelation, self.relation_dim, self.housd_num))
-        nn.init.uniform_(
-            tensor=self.k_scale_head,
-            a=-1,
-            b=+1
-        )
-
-        self.k_scale_tail = nn.Parameter(torch.zeros(nrelation, self.relation_dim, self.housd_num))
-        nn.init.uniform_(
-            tensor=self.k_scale_tail,
-            a=-1,
-            b=+1
-        )
-
-        self.relation_weight = nn.Parameter(torch.zeros(nrelation, self.relation_dim, self.house_dim))
-        nn.init.uniform_(
-            tensor=self.relation_weight,
-            a=-self.embedding_range.item(),
-            b=self.embedding_range.item()
-        )
 
     def init_node_embedding(self):
         # embeddings = []
@@ -171,7 +158,7 @@ class HyperGraphV3(Module):
    
 
     def reg_l2(self):
-        return torch.mean(torch.norm(self.entity_embedding.weight,dim=-1))
+        return torch.mean(torch.norm(self.node_emb.weight,dim=-1))
         # reg_loss = 0
         # for param in self.parameters():
         #     reg_loss += torch.norm(param, p=2)  # 使用L2正则化
@@ -189,8 +176,7 @@ class HyperGraphV3(Module):
         # node = self.node_encoder.get_smiles_emb(smiles_tokens,src_padding_mask)
         # node = torch.mean(node, dim=1)
         nids = nids.cuda()
-        node = self.entity_embedding(nids)
-        node = node.reshape(node.shape[0],-1)
+        node = self.node_emb(nids)
         # node = self.node_emb[nids]
 
         # print(node.shape)
@@ -216,7 +202,27 @@ class HyperGraphV3(Module):
         return noise
 
     def full_score(self, head_emb, relation, tail_emb,add_noise=False):
-        return self.house_score(head_emb, relation, tail_emb)
+        
+        if relation is not None:
+            relation_emb = self.rel_emb(relation)
+            if len(relation_emb.shape) == 2:
+                relation_emb = relation_emb.unsqueeze(1)
+        else:
+            relation_emb = None
+        
+
+        if len(head_emb.shape) == 2:
+            head_emb = head_emb.unsqueeze(1)
+
+        if len(tail_emb.shape) == 2:
+            tail_emb = tail_emb.unsqueeze(1)
+        
+        if add_noise:
+            head_noise = self.sample_noise(head_emb)
+            tail_noise = self.sample_noise(tail_emb)
+            head_emb = head_emb + head_noise
+            tail_emb = tail_emb + tail_noise
+        return self.paire_score(head_emb, relation_emb, tail_emb)
 
     def realtion_predict(self, head, relation, tail):
         head = head.reshape(head.shape[0],-1)
@@ -235,7 +241,23 @@ class HyperGraphV3(Module):
         score = - torch.norm(score, p=1, dim=2)
         return score
 
-  
+    def realtion_predict_all(self, head, relation, tail):
+        head = head.repeat(1,relation.shape[1],1)
+        tail = tail.repeat(1,relation.shape[1],1)
+        emb = torch.cat([head, tail,relation],dim=-1)
+
+        q = self.dropout(torch.relu(self.q_weight(emb)))
+        k = self.dropout(torch.relu(self.k_weight(emb)))
+        v = self.dropout(torch.relu(self.v_weight(emb)))
+
+        attention_weights = torch.matmul(q, k.transpose(1, 2)) / math.sqrt(self.entity_dim)
+        # print(attention_weights.shape)
+        attention_scores = torch.matmul(attention_weights, v)
+        emb = self.dropout(attention_scores)
+        # print(attention_scores.shape)
+        score = self.ce_predictor(attention_scores)
+        score = score.squeeze(-1)
+        return score
 
     def realtion_predict_mul(self, head, relation, tail):
         emb = head * tail * relation
@@ -247,96 +269,6 @@ class HyperGraphV3(Module):
     def distmult_score(self, head, relation, tail):
         score = head * tail * relation
         return torch.sigmoid(torch.sum(score,dim=-1))
-    
-    def house_score_function(self, head, relation, tail, k_head, k_tail,mode):
-        r_list = torch.chunk(relation, self.house_num, 3)  # self.house_num 个关系
-        epsilon =  0.05
-        pi = 3.14159265358979323846
-        if mode == 'h_rt':
-            for i in range(self.housd_num):
-                k_tail_i = k_tail[:, :, :, i].unsqueeze(dim=3)
-                tail = tail - (0 + k_tail_i) * (r_list[i] * tail).sum(dim=-1, keepdim=True) * r_list[i]
-          
-
-            for i in range(self.housd_num, self.house_num-self.housd_num):
-                tail = tail - 2 * (r_list[i] * tail).sum(dim=-1, keepdim=True) * r_list[i]
-
-            
-            for i in range(self.housd_num):
-                k_head_i = k_head[:, :, :, i].unsqueeze(dim=3)
-                head = head - (0 + k_head_i) * (r_list[self.house_num-1-i] * head).sum(dim=-1, keepdim=True) * r_list[self.house_num-1-i]
-
-            cos_score = tail - head
-            cos_score = torch.sum(cos_score.norm(dim=3, p=2), dim=2)
-        else:
-            for i in range(self.housd_num):
-                k_head_i = k_head[:, :, :, i].unsqueeze(dim=3)
-
-                head = head - (0 + k_head_i) * (r_list[self.house_num-1-i] * head).sum(dim=-1, keepdim=True) * r_list[self.house_num-1-i]
-           
-
-            for i in range(self.housd_num, self.house_num-self.housd_num):
-                j = self.house_num - 1 - i
-                head = head - 2 * (r_list[j] * head).sum(dim=-1, keepdim=True) * r_list[j]
-
-            for i in range(self.housd_num):
-                k_tail_i = k_tail[:, :, :, i].unsqueeze(dim=3)
-                tail = tail - (0 + k_tail_i) * (r_list[i] * tail).sum(dim=-1, keepdim=True) * r_list[i]
-
-            cos_score = head - tail
-            cos_score = torch.sum(cos_score.norm(dim=3, p=2), dim=2)
-        score = - cos_score
-        return score
-
-    def norm_embedding(self,):
-        r_list = torch.chunk(self.relation_embedding, self.house_num, 2)
-        normed_r_list = []
-        for i in range(self.house_num):
-            r_i = torch.nn.functional.normalize(r_list[i], dim=2, p=2)
-            normed_r_list.append(r_i)
-        r = torch.cat(normed_r_list, dim=2)
-        self.k_head = self.k_dir_head * torch.abs(self.k_scale_head)
-        self.k_head[self.k_head>self.thred] = self.thred
-        self.k_tail = self.k_dir_tail * torch.abs(self.k_scale_tail)
-        self.k_tail[self.k_tail>self.thred] = self.thred
-        return  r
-    
-    def house_score(self, head,r,tail, mode='hrt'):
-        '''
-        Forward function that calculate the score of a batch of triples.
-        In the 'single' mode, sample is a batch of triple.
-        In the 'head-batch' or 'tail-batch' mode, sample consists two part.
-        The first part is usually the positive sample.
-        And the second part is the entities in the negative samples.
-        Because negative samples and positive samples usually share two elements
-        in their triple ((head, relation) or (relation, tail)).
-        '''
-
-        r_emb = self.norm_embedding()
-        batch_size = r.shape[0]
-        
-
-        k_head = torch.index_select(
-            self.k_head,
-            dim=0,
-            index=r.reshape(-1)
-        ).reshape(batch_size, -1, self.k_head.shape[-2],self.k_head.shape[-1])
-
-        k_tail = torch.index_select(
-            self.k_tail,
-            dim=0,
-            index=r.reshape(-1)
-        ).reshape(batch_size, -1, self.k_tail.shape[-2],self.k_tail.shape[-1])
-
-        relation = torch.index_select(
-            r_emb,
-            dim=0,
-            index=r.reshape(-1)
-        ).reshape(batch_size, -1, r_emb.shape[-2],r_emb.shape[-1])
-        head = head.reshape(batch_size, 1, self.entity_dim, -1)
-        tail = tail.reshape(batch_size, 1, self.entity_dim, -1)
-        score = self.house_score_function(head, relation, tail, k_head, k_tail, mode)
-        return score
 
     def complex_score(self, head, relation, tail):
         head_re, head_im = head.chunk(2, -1)               # (batch,1,dim), (batch,n,dim),  (1,n_e,dim)
@@ -379,7 +311,35 @@ class HyperGraphV3(Module):
             x = torch.squeeze(x)
         x = torch.sigmoid(x)
         return x
-  
+    
+    @staticmethod
+    def cl_score(x,y,weight,temperature=0.5):
+        if x.shape != y.shape:
+            return None
+        """
+        计算对比损失
+        :param x: Tensor, shape (batch_size, dim)
+        :param y: Tensor, shape (batch_size, dim)
+        :param temperature: 温度参数，用于缩放相似度
+        :return: 对比损失值
+        """
+        batch_size = x.shape[0]
+        
+        # 计算余弦相似度
+        x = F.normalize(x, dim=1)
+        y = F.normalize(y, dim=1)
+        similarity_matrix = torch.matmul(x, y.T) / temperature # N*N的相似矩阵
+        # 生成标签
+        labels = torch.arange(batch_size).to(x.device)
+
+        softmax_scores = F.log_softmax(similarity_matrix, dim=1)
+       
+        loss = -softmax_scores[torch.arange(batch_size), labels] 
+        if weight != None:
+            weight = weight.to(x.device)
+            loss = loss * weight
+        loss = loss.mean()
+        return loss
 
     @staticmethod
     def train_step(model,optimizer,data,loss_funcation, config=None,subClassOf=None, typeOf= None, subLoss=None, typeLoss=None,cl_dataset=None):
@@ -397,13 +357,51 @@ class HyperGraphV3(Module):
         tail_emb = model.single_emb(tail_out)
         pos_score = model.full_score(head_emb, relation, tail_emb)
 
+        # pos_score = pos_score.unsqueeze(-1)
+        # lable shapre = len(head)* (1 + len(negative_sample))
+        # lable = torch.zeros(len(head), 1 + len(negative_sample[0]))
+        # lable[:, 0] = 1 
+        # lable = lable.cuda()
+
         negative_sample = negative_sample.cuda()
         neg_score = model.full_score(head_emb, negative_sample, tail_emb)
+
+        # score = torch.cat([pos_score,neg_score],dim=-1)
+        # loss = model.loss_funcation(score,lable)
+
+        # loss = model.loss_funcation(pos_score,relation)
         loss = model.loss_funcation(pos_score,neg_score)
         logs = {    
             "loss": loss.item(),
         }
-       
+        if config["add_entity_noise"]:
+            head_emb_noise = model.single_emb(head_out,add_noise=True)
+            tail_emb_noise = model.single_emb(tail_out,add_noise=True)
+            noise_score = model.full_score(head_emb_noise, relation, tail_emb_noise, add_noise=False)
+            mse_loss = model.mse_loss(pos_score, noise_score)
+            noise_loss = model.loss_funcation(noise_score,relation)
+
+            loss = loss + mse_loss*config["noise_weight"] + noise_loss
+            logs["mse_loss"] = mse_loss.item()*config["noise_weight"]
+           
+        if config["add_edge_noise"]:
+            noise_score = model.full_score(head_emb, relation, tail_emb, add_noise=True)
+            mse_loss = model.mse_loss(pos_score, noise_score)
+            noise_loss = model.loss_funcation(noise_score,relation)
+
+            loss = loss + mse_loss*config["noise_weight"] + noise_loss
+            logs["mse_loss"] = mse_loss.item()*config["noise_weight"] 
+            logs["noise_loss"] = noise_loss.item()
+
+        add_cl = False
+        if config["add_edge_cl"]:
+            base,pos,weight,base_out,pos_out = next(cl_dataset)
+            base_emb = model.single_emb(base_out)
+            pos_emb = model.single_emb(pos_out)
+            cl_loss = HyperGraphV3.cl_score(base_emb,pos_emb,weight, config["cl_temp"])
+            loss += config["cl_weight"]*cl_loss
+            logs["cl_loss"] = cl_loss.item() * config["cl_weight"]
+
         if config["reg_weight"] != 0.0:
             reg = model.reg_l2()
             logs["reg"] = reg * config["reg_weight"]

@@ -52,6 +52,7 @@ for p,c,l in valid_paire:
 for p,c,l in all_false_list:
     all_p_list.append(p)
 
+print(len(all_p_list))
 
 c2neg = {}
 for c in true_c_list:
@@ -61,6 +62,6 @@ for c in true_c_list:
                 c2neg[c] = []
             c2neg[c].append(p)
 
-import json
-with open("neg_pairs.json","w") as f:
-    json.dump(c2neg,f)
+# import json
+# with open("neg_pairs.json","w") as f:
+#     json.dump(c2neg,f)
