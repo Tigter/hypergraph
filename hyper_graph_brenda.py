@@ -322,7 +322,11 @@ if __name__=="__main__":
                 for key in metrics:
                     writer.add_scalar(key, metrics[key], global_step=step, walltime=None)
                 logset.log_metrics('Valid ', step, metrics)
+
                 ModelUtil.save_best_model(metrics=metrics,best_metrics=bestModel,model=model,optimizer=optimizer,save_variable_list=save_variable_list,args=args)
+                logging.info('Test InstanceOf at step: %d' % step)
+                metrics = test_step_function(model, test_dataset,modelConfig)
+                logset.log_metrics('Test ',step, metrics)
             for data in train_dataset:
                 log = HyperGraphV3.train_step(model=model,optimizer=optimizer,data=data,loss_funcation=base_loss_funcation,config=modelConfig,subLoss=sub_loss_function,typeLoss=type_loss_function,cl_dataset=cl_dataset)
                 baselog.append(log)
