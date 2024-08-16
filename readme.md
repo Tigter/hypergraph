@@ -1,73 +1,26 @@
-# 数据集的统计分析
+# HyperGraph and EnzRank Project
+## Project Structure
+This project is designed to facilitate the training and evaluation of HyperGraph and EnzRank models. Below is an overview of the project structure and the purpose of each file and directory:
+
+Core Files and Directories
+1. hyper_graph_brenda.py: 
+This is the main entry point for training the HyperGraph model. It contains the necessary code to initialize and train the HyperGraph model.
+
+2. enzrank_model/EnzRank.py: 
+This file contains the implementation of the EnzRank model. It includes the model architecture, training procedures, and evaluation metrics.
+
+3. enzrank_model/run.sh: 
+This is a shell script for running the EnzRank model. It automates the process of setting up the environment and executing the model training and evaluation.
+
+4. enzrank_model/result_any/: 
+This directory includes the results of joint testing for the EnzRank model. It contains various output files and logs generated during the testing process.
+
+5.sh/hyper_graph.sh
+This shell script contains the commands for training the HyperGraph model. It simplifies the process of executing the training pipeline by providing a single command to run.
 
 
-## 数据的输入：
-1. 转为id的三元组
-2. 未转为id的三元组 + id字典
-3. 未转id的三元组
-4. 加入reverse 三元组
+6.sh/rotate.sh: 
+This shell script contains the commands for training the KGE (Knowledge Graph Embedding) baseline model. It provides a straightforward way to execute the training process for the KGE baseline.
 
-# 数据集的构建
-1. 输出：正负样本的构建
-    * 负采样：
-    * 按照权重的采样
-
-2. 输出：ground-truth 的构建： 目前是两个数据集，建议放到一起
-    * 1-1的构建
-    * 1-N的构建
-
-# 损失函数
-* 正负样本的损失函数
-* ground-truth 和 prediction 之间的损失函数
-
-# 针对数据集和损失的不同构建两个训练和测试的方式 
-
-# 指标问题
-新增一些测试指标和新的测试方法
-
-
-# 正则化问题
-
-# 可视化分析工具
-
-
-
-# 模型实现：
-    支持5中计算模式：主要是为了提升一点计算速度
-    模型不同初始化的方式
-    模型之间的参数形式
-
-应用于科研领域：让代码尽量的清晰易懂，容易进行扩充
-方法之间尽量独立，便于扩充和自己组合，然后提供一个顶层一点的组合
-
-
-1. 负采样的方法：
-    如果基于封闭世界假设，则可以全部进行负采样
-    如果基于随机封闭世界假设，则是随机方法选择负样本
-    如果基于RotatE的采样，需要增加权重
-
-2. 数据集的形式：
-数据会有两个大类：
-第一类是h,r,t 全部都有， 第二类是只有hr或rt，表示h或t为全部实体，这里不构建数据集能够有效减小显存占用。
-无论何种数据集，模型只需要计算对应的
-
-
-3. 模型的形式
-    模型内自定义参数
-
-
-4. 损失定义
-
-5. 正则方法
-
-6. 超参选择方法
-
-日志的配置
-
-首先：
-实现最常用的MRL：
-$$
-L(\Delta) = \max(0, \lambda + \Delta)
-$$
-$\Delta$ is equal to the result of negative samples score sub positive samples score.
-
+7. config/
+This directory contains configuration files for both the HyperGraph and KGE baseline models. These files include various parameters and settings required for training.
