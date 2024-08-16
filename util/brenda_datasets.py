@@ -31,6 +31,9 @@ def load_data():
     # 大数据集加入了 没有酶的数据
     graph_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_add_ne_reaction_graph_info.pkl")
     train_info = torch.load("./pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_edge_type_add_ne_reaction_train_info.pkl")
+
+    # graph_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_one_edge_type_add_ne_reaction_graph_info.pkl")
+    # train_info = torch.load("/home/skl/yl/ce_project/relation_cl/pre_handle_data/brenda_07/brenda_bigger_lhf_no_e_add_one_edge_type_add_ne_reaction_train_info.pkl")
     return graph_info, train_info
 
 def build_graph_sampler(config):

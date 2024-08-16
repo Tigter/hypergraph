@@ -259,8 +259,7 @@ if __name__=="__main__":
          'params':filter(lambda p: p.requires_grad , otherEmb), 
          'lr': lr
         }
-        ], lr=lr,
-        weight_decay=0.001,
+        ], lr=lr
     )
     result = get_parameter_number(model)
     logging.info("模型总大小为：%s" % str(result["Total"]))

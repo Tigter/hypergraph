@@ -90,7 +90,8 @@ class HyperGraphV3(Module):
             torch.nn.Linear(hyperkgeConfig.embedding_dim*2, self.e_num),
             torch.nn.Sigmoid()
         )
-        self.loss_funcation = nn.BCELoss()
+        # self.loss_funcation = nn.BCELoss()
+        self.loss_funcation = nn.CrossEntropyLoss()
         # self.loss_funcation = NSSAL(gamma=9,plus_gamma=True)
 
         # self.ce_predictor = torch.nn.Sequential(
@@ -209,20 +210,18 @@ class HyperGraphV3(Module):
                 relation_emb = relation_emb.unsqueeze(1)
         else:
             relation_emb = None
-        
 
         if len(head_emb.shape) == 2:
             head_emb = head_emb.unsqueeze(1)
 
         if len(tail_emb.shape) == 2:
             tail_emb = tail_emb.unsqueeze(1)
-        
         if add_noise:
             head_noise = self.sample_noise(head_emb)
             tail_noise = self.sample_noise(tail_emb)
             head_emb = head_emb + head_noise
             tail_emb = tail_emb + tail_noise
-        return self.paire_score(head_emb, relation_emb, tail_emb)
+        return self.realtion_predict(head_emb, relation_emb, tail_emb)
 
     def realtion_predict(self, head, relation, tail):
         head = head.reshape(head.shape[0],-1)
@@ -363,14 +362,14 @@ class HyperGraphV3(Module):
         # lable[:, 0] = 1 
         # lable = lable.cuda()
 
-        negative_sample = negative_sample.cuda()
-        neg_score = model.full_score(head_emb, negative_sample, tail_emb)
+        # negative_sample = negative_sample.cuda()
+        # neg_score = model.full_score(head_emb, negative_sample, tail_emb)
 
         # score = torch.cat([pos_score,neg_score],dim=-1)
         # loss = model.loss_funcation(score,lable)
 
-        # loss = model.loss_funcation(pos_score,relation)
-        loss = model.loss_funcation(pos_score,neg_score)
+        loss = model.loss_funcation(pos_score,relation)
+        # loss = model.loss_funcation(pos_score,neg_score)
         logs = {    
             "loss": loss.item(),
         }
@@ -402,10 +401,10 @@ class HyperGraphV3(Module):
             loss += config["cl_weight"]*cl_loss
             logs["cl_loss"] = cl_loss.item() * config["cl_weight"]
 
-        # if config["reg_weight"] != 0.0:
-        #     reg = model.reg_l2()
-        #     logs["reg"] = reg * config["reg_weight"]
-        #     loss += reg * config["reg_weight"]
+        if config["reg_weight"] != 0.0:
+            reg = model.reg_l2()
+            logs["reg"] = reg * config["reg_weight"]
+            loss += reg * config["reg_weight"]
         loss.backward()
         optimizer.step()
         return logs
